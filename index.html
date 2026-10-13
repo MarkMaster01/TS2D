@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Vlakový Simulátor - Kompletní Hra</title>
+    <title>2D Vlakový Simulátor</title>
     
     <!-- LEAFLET MAPA -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -28,7 +28,6 @@
             color: #fff;
         }
 
-        /* HORNÍ NAVIGAČNÍ LIŠTA */
         .top-navbar {
             position: absolute;
             top: 0;
@@ -48,7 +47,6 @@
         .nav-btn { background: #333; color: #fff; border: 1px solid #555; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 10px; }
         .nav-btn:hover { background: #444; }
 
-        /* HLAVNÍ SEKCÍ (OBRAZOVKY) */
         .screen {
             position: absolute;
             top: 50px;
@@ -58,7 +56,6 @@
             display: none;
         }
         
-        /* MAPOVÁ OBRAZOVKA */
         #mapScreen { display: flex; flex-direction: column; background-color: #1a1a1a; }
         #mapHeader {
             padding: 12px 25px;
@@ -111,7 +108,6 @@
         .start-btn:hover:not(:disabled) { background: #2ecc71; }
         #mapContainer { flex: 1; width: 100%; height: 100%; }
 
-        /* GARÁŽ / DEPO */
         #garageScreen { background: #1a1a1a; padding: 25px; overflow-y: auto; }
         .garage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
         .garage-card { background: #252525; border: 1px solid #383838; border-radius: 8px; padding: 20px; }
@@ -121,7 +117,6 @@
         .buy-btn:disabled { background: #555; cursor: not-allowed; }
         .owned-badge { background: #27ae60; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; }
 
-        /* HERNÍ SIMULÁTOR */
         #gameScreen { position: absolute; top: 50px; left: 0; width: 100vw; height: calc(100vh - 50px); display: none; }
         #gameCanvas { display: block; width: 100vw; height: calc(100vh - 50px); }
         .hud-overlay {
@@ -172,7 +167,6 @@
 </head>
 <body>
 
-    <!-- NAVIGAČNÍ LIŠTA NAHOŘE -->
     <div class="top-navbar">
         <div class="nav-title">🚂 2D Vlakový Simulátor</div>
         <div>
@@ -191,7 +185,7 @@
             </div>
             
             <div class="search-box">
-                <input type="text" id="searchInput" class="search-input" placeholder="Vyhledat stanici (např. Varnsdorf)..." oninput="filterStations()">
+                <input type="text" id="searchInput" class="search-input" placeholder="Vyhledat stanici..." oninput="filterStations()">
                 <div id="suggestionsList" class="suggestions-list"></div>
             </div>
 
@@ -200,7 +194,7 @@
         <div id="mapContainer"></div>
     </div>
 
-    <!-- 2. OBRAZOVKA GARÁŽE (DEPO) -->
+    <!-- 2. GARÁŽ / DEPO -->
     <div id="garageScreen" class="screen">
         <div class="garage-grid">
             <div class="garage-card">
@@ -277,24 +271,20 @@
     </div>
 
 <script>
-// --- AUTOMATICKÉ TRVALÉ UKLÁDÁNÍ DO PROHLÍŽEČE (LOCALSTORAGE) ---
+// NACITANI DAT ZE SKRIPTOVYCH SOUBORU
+function getStationsData() {
+    return (typeof czechStationsDatabase !== 'undefined') ? czechStationsDatabase : [];
+}
+
+function getShopVehiclesData() {
+    return (typeof availableShopVehicles !== 'undefined') ? availableShopVehicles : [];
+}
+
 let playerPoints = parseInt(localStorage.getItem('ts2d_points')) || 100;
-let ownedVehicles = JSON.parse(localStorage.getItem('ts2d_owned')) || ['ampz.bmp', 'bdmtee.bmp', 'vectron.bmp'];
+let ownedVehicles = JSON.parse(localStorage.getItem('ts2d_owned')) || [];
 
-// Nabídka obchodu
-const availableShopVehicles = [
-    { label: 'Vagón Ampz 1. třída', file: 'ampz.bmp', price: 50 },
-    { label: 'Vagón Bdmtee 2. třída', file: 'bdmtee.bmp', price: 30 },
-    { label: 'Lokomotiva Vectron 383', file: 'vectron.bmp', price: 150 }
-];
-
-// Výchozí souprava načtená ze souboru souprava.js nebo z paměti
-let activeTrainCars = JSON.parse(localStorage.getItem('ts2d_assembly')) || (typeof trainCarsData !== 'undefined' ? trainCarsData : [
-    { type: 'wagon', targetHeight: 70, color: '#5cb85c', label: 'Ampz', file: 'ampz.bmp' },
-    { type: 'wagon', targetHeight: 70, color: '#0275d8', label: 'Bdmtee', file: 'bdmtee.bmp' },
-    { type: 'wagon', targetHeight: 70, color: '#0275d8', label: 'Bdmtee', file: 'bdmtee.bmp' },
-    { type: 'loco', targetHeight: 70, color: '#d9534f', label: 'Vectron', file: 'vectron.bmp' }
-]);
+// Načtení výchozí soupravy ze souprava.js
+let activeTrainCars = JSON.parse(localStorage.getItem('ts2d_assembly')) || (typeof trainCarsData !== 'undefined' ? trainCarsData : []);
 
 function saveGameState() {
     localStorage.setItem('ts2d_points', playerPoints);
@@ -317,8 +307,9 @@ function showScreen(screenId) {
 function renderGarage() {
     const shopContainer = document.getElementById('shopList');
     shopContainer.innerHTML = '';
+    const shopData = getShopVehiclesData();
 
-    availableShopVehicles.forEach(item => {
+    shopData.forEach(item => {
         let isOwned = ownedVehicles.includes(item.file);
         let div = document.createElement('div');
         div.className = 'shop-item';
@@ -330,8 +321,10 @@ function renderGarage() {
             buttonHtml = `<button class="buy-btn" ${playerPoints < item.price ? 'disabled' : ''} onclick="buyVehicle('${item.file}', ${item.price})">Koupit (${item.price} PK)</button>`;
         }
 
+        let displayPath = item.file.length > 30 ? item.file.substring(0, 30) + '...' : item.file;
+
         div.innerHTML = `
-            <div><strong>${item.label}</strong><br><span style="color:#aaa; font-size:12px;">Soubor: ${item.file}</span></div>
+            <div><strong>${item.label}</strong><br><span style="color:#aaa; font-size:11px;">Odkaz: ${displayPath}</span></div>
             <div>${buttonHtml}</div>
         `;
         shopContainer.appendChild(div);
@@ -351,7 +344,7 @@ function buyVehicle(file, price) {
 
 function addCarToTrain(label, file) {
     let type = label.toLowerCase().includes('lokomotiva') ? 'loco' : 'wagon';
-    activeTrainCars.push({ type: type, targetHeight: 70, color: '#0275d8', label: label.split(' ')[1] || 'Vagón', file: file });
+    activeTrainCars.push({ type: type, targetHeight: 70, color: '#0275d8', label: label.split(' ')[1] || 'Vozidlo', file: file });
     saveGameState();
     renderCurrentTrain();
 }
@@ -370,7 +363,8 @@ function renderCurrentTrain() {
     activeTrainCars.forEach((car, idx) => {
         let div = document.createElement('div');
         div.style.cssText = "background:#333; padding:8px 12px; margin-bottom:6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;";
-        div.innerHTML = `<span><strong>${idx + 1}.</strong> ${car.label || car.file} (${car.file})</span> <button onclick="removeCarFromTrain(${idx})" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:3px 8px; cursor:pointer;">Odebrat</button>`;
+        let shortName = car.file.startsWith('http') ? car.file.split('/').pop() : car.file;
+        div.innerHTML = `<span><strong>${idx + 1}.</strong> ${car.label || shortName}</span> <button onclick="removeCarFromTrain(${idx})" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:3px 8px; cursor:pointer;">Odebrat</button>`;
         trainList.appendChild(div);
     });
 }
@@ -395,14 +389,22 @@ function initMap() {
         maxZoom: 18
     }).addTo(map);
 
-    const stations = (typeof czechStationsDatabase !== 'undefined') ? czechStationsDatabase : [];
+    const stations = getStationsData();
 
     stations.forEach(station => {
-        let marker = L.marker([station.lat, station.lng]).addTo(map);
-        marker.bindPopup(`<b>${station.name}</b><br><button onclick="selectStation('${station.name}')">Vybrat stanici</button>`);
+        let marker = L.circleMarker([station.lat, station.lng], {
+            radius: 6,
+            fillColor: "#ff3333",
+            color: "#ffffff",
+            weight: 2,
+            fillOpacity: 0.9
+        }).addTo(map);
+
+        marker.bindPopup(`<b>${station.name}</b><br><button onclick="selectStation('${station.name}')" style="background:#27ae60; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; margin-top:5px;">Vybrat stanici</button>`);
         markers[station.name] = marker;
     });
 }
+
 window.onload = () => {
     initMap();
     updatePointsDisplay();
@@ -418,7 +420,7 @@ function filterStations() {
         return;
     }
 
-    const stations = (typeof czechStationsDatabase !== 'undefined') ? czechStationsDatabase : [];
+    const stations = getStationsData();
     let matches = stations.filter(s => s.name.toLowerCase().includes(input));
 
     if (matches.length > 0) {
@@ -442,7 +444,7 @@ function filterStations() {
 }
 
 function selectStation(name) {
-    const stations = (typeof czechStationsDatabase !== 'undefined') ? czechStationsDatabase : [];
+    const stations = getStationsData();
     let station = stations.find(s => s.name === name);
     
     if (!selectedStartStation) {
@@ -461,9 +463,8 @@ function selectStation(name) {
     }
 }
 
-// VÝPOČET REÁLNÝCH MEZILEHLÝCH STANIC
 function calculateIntermediateStations(start, end) {
-    const stations = (typeof czechStationsDatabase !== 'undefined') ? czechStationsDatabase : [];
+    const stations = getStationsData();
     let intermediate = [];
 
     stations.forEach(s => {
@@ -534,15 +535,6 @@ function startSimulation() {
     resizeCanvas();
 }
 
-function returnToMap() {
-    showScreen('mapScreen');
-    selectedStartStation = null;
-    selectedEndStation = null;
-    document.getElementById('startTrainBtn').disabled = true;
-    document.getElementById('routeText').innerHTML = `Klikněte na mapě nebo vyhledejte <strong>startovní stanici</strong>.`;
-    if (polyline) map.removeLayer(polyline);
-}
-
 // SIMULÁTOR LOGIKA A VYKRESLOVÁNÍ
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -588,6 +580,7 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
+// PODPORA PRO URL ODKAZY Z VAGONWEBU AJ.
 function loadTrainImages() {
     activeTrainCars.forEach(car => {
         car.img = new Image();
@@ -600,7 +593,11 @@ function loadTrainImages() {
             car.imgLoaded = true;
         };
 
-        car.img.src = VEHICLES_FOLDER + car.file;
+        if (car.file.startsWith('http://') || car.file.startsWith('https://')) {
+            car.img.src = car.file;
+        } else {
+            car.img.src = VEHICLES_FOLDER + car.file;
+        }
     });
 }
 
@@ -650,7 +647,7 @@ function startPassengerExchange() {
         if (station.getOffCount > 0 && totalPassengers > 0) {
             station.getOffCount--;
             totalPassengers--;
-            playerPoints += 10; // Získání bodů
+            playerPoints += 10;
             saveGameState();
         } else if (station.getOnCount > 0) {
             station.getOnCount--;
@@ -734,7 +731,6 @@ function updateUI() {
     }
 }
 
-// VYKRESLOVÁNÍ SCÉNY (Mraky, Kopce, Stromy, Trať, Panáčci)
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -864,20 +860,17 @@ function drawDetailedTracks(railY) {
 }
 
 function drawTrain(railY) {
-    // 1. Spočítáme celkovou délku celé soupravy
     let totalTrainWidth = 0;
     activeTrainCars.forEach((car, index) => {
         const carWidth = car.width || 220;
         totalTrainWidth += carWidth;
         if (index < activeTrainCars.length - 1) {
-            totalTrainWidth += 8; // mezera / spřáhlo
+            totalTrainWidth += 8;
         }
     });
 
-    // 2. Vycentrujeme startovní pozici tak, aby střed vlaku byl ve středu obrazovky
     let currentX = (canvas.width / 2) - (totalTrainWidth / 2);
 
-    // 3. Vykreslení jednotlivých vozů
     activeTrainCars.forEach((car, index) => {
         const carHeight = car.height || 70;
         const carWidth = car.width || 220;

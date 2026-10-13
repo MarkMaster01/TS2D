@@ -284,7 +284,7 @@ let playerPoints = parseInt(localStorage.getItem('ts2d_points')) || 100;
 let ownedVehicles = JSON.parse(localStorage.getItem('ts2d_owned')) || [];
 
 // Načtení výchozí soupravy ze souprava.js
-let activeTrainCars = JSON.parse(localStorage.getItem('ts2d_assembly')) || (typeof trainCarsData !== 'undefined' ? trainCarsData : []);
+let activeTrainCars = (typeof trainCarsData !== 'undefined' ? trainCarsData : [])
 
 function saveGameState() {
     localStorage.setItem('ts2d_points', playerPoints);

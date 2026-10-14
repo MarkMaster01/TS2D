@@ -767,13 +767,27 @@ function drawSkyAndClouds(railY) {
 }
 
 function drawFarHills(railY) {
-    ctx.fillStyle = '#2c3e50';
+    // 1. Zadní vysoké pohoří (pohybuje se velmi pomalu)
+    ctx.fillStyle = '#1e2b37';
     ctx.beginPath();
     ctx.moveTo(0, railY);
+    let backOffset = (totalDistance * 0.02) % 1200;
+    for (let x = -backOffset - 1200; x < canvas.width + 1200; x += 600) {
+        ctx.quadraticCurveTo(x + 300, railY - 240, x + 600, railY);
+    }
+    ctx.fill();
 
-    let hillOffset = (totalDistance * 0.05) % 800;
-    for (let x = -hillOffset - 800; x < canvas.width + 800; x += 400) {
-        ctx.quadraticCurveTo(x + 200, railY - 140, x + 400, railY);
+    // 2. Přední nižší kopce (pohybuje se o něco rychleji)
+    let frontGradient = ctx.createLinearGradient(0, railY - 180, 0, railY);
+    frontGradient.addColorStop(0, '#2c3e50');
+    frontGradient.addColorStop(1, '#1b2631');
+    ctx.fillStyle = frontGradient;
+    
+    ctx.beginPath();
+    ctx.moveTo(0, railY);
+    let frontOffset = (totalDistance * 0.08) % 900;
+    for (let x = -frontOffset - 900; x < canvas.width + 900; x += 450) {
+        ctx.quadraticCurveTo(x + 225, railY - 160, x + 450, railY);
     }
     ctx.fill();
 }
@@ -793,7 +807,7 @@ function drawProceduralTrees(railY) {
         
         if (seed > 0.45) {
             let worldX = i * treeSpacing;
-            let screenX = worldX - (totalDistance * 10) + canvas.width * 0.5;
+            let screenX = worldX - (totalDistance * 35) + canvas.width * 0.5;
 
             let treeHeight = 55 + (seed * 35);
             let treeY = railY - 8;
@@ -818,39 +832,96 @@ function drawProceduralTrees(railY) {
 
 function drawStationBuilding(railY) {
     route.forEach(station => {
-        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 15;
+        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
 
-        if (stationScreenX > -1000 && stationScreenX < canvas.width + 1000) {
-            ctx.fillStyle = '#bdc3c7';
-            ctx.fillRect(stationScreenX - 250, railY - 130, 500, 115);
-            
-            ctx.fillStyle = '#c0392b';
+        if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
+            const bWidth = 520;
+            const bHeight = 145;
+            const bLeft = stationScreenX - bWidth / 2;
+            const bTop = railY - bHeight - 15;
+
+            // Hlavní tělo budovy
+            ctx.fillStyle = '#d5dbdb';
+            ctx.fillRect(bLeft, bTop, bWidth, bHeight);
+
+            // Cihlový/kamenný sokl dole
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(bLeft, railY - 30, bWidth, 15);
+
+            // Střecha s přeshem
+            ctx.fillStyle = '#902c1d';
             ctx.beginPath();
-            ctx.moveTo(stationScreenX - 270, railY - 130);
-            ctx.lineTo(stationScreenX, railY - 170);
-            ctx.lineTo(stationScreenX + 270, railY - 130);
+            ctx.moveTo(bLeft - 30, bTop);
+            ctx.lineTo(stationScreenX, bTop - 45);
+            ctx.lineTo(bLeft + bWidth + 30, bTop);
             ctx.fill();
 
+            // Okna na budově (horní patro)
+            ctx.fillStyle = '#2c3e50';
+            for (let wx = bLeft + 40; wx < bLeft + bWidth - 40; wx += 65) {
+                ctx.fillRect(wx, bTop + 25, 35, 45);
+                ctx.fillStyle = '#85c1e9'; // Odlesk okna
+                ctx.fillRect(wx + 3, bTop + 28, 14, 39);
+                ctx.fillStyle = '#2c3e50';
+            }
+
+            // Vchodové dveře (dole)
+            ctx.fillStyle = '#4a235a';
+            ctx.fillRect(stationScreenX - 25, railY - 75, 50, 45);
+
+            // Staniční hodiny
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(stationScreenX, bTop + 22, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Cedule s názvem stanice
             ctx.fillStyle = '#00284d';
-            ctx.fillRect(stationScreenX - 140, railY - 120, 280, 30);
+            ctx.fillRect(stationScreenX - 150, bTop - 15, 300, 32);
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(stationScreenX - 140, railY - 120, 280, 30);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(stationScreenX - 150, bTop - 15, 300, 32);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 15px Arial';
+            ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(station.name, stationScreenX, railY - 100);
+            ctx.fillText(station.name, stationScreenX, bTop + 7);
         }
     });
 }
 
 function drawDetailedTracks(railY) {
+    // Zjištění, zda se Blížíme/jsme ve větší stanici pro vykreslení 2. koleje v pozadí
+    let isBigStationNearby = route.some(st => {
+        let dist = Math.abs(st.position - totalDistance) * 35;
+        return dist < 1500 && (st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň"));
+    });
+
+    // 2. KOLEJ V POZADÍ (pokud jsme ve větší stanici)
+    if (isBigStationNearby) {
+        const backRailY = railY - 22;
+        ctx.fillStyle = '#3a3533';
+        ctx.fillRect(0, backRailY - 4, canvas.width, 12);
+        
+        ctx.fillStyle = '#1e140a';
+        let backSleeperOffset = (totalDistance * 35) % 20;
+        for (let x = -backSleeperOffset - 20; x < canvas.width + 20; x += 20) {
+            ctx.fillRect(x, backRailY - 2, 8, 8);
+        }
+        
+        ctx.fillStyle = '#5d6d7e';
+        ctx.fillRect(0, backRailY - 2, canvas.width, 3);
+    }
+
+    // HLAVNÍ KOLEJ V POPŘEDÍ
     ctx.fillStyle = '#4a4441';
     ctx.fillRect(0, railY - 8, canvas.width, 22);
 
     ctx.fillStyle = '#2b1b0e';
-    let sleeperOffset = (totalDistance * 15) % 24;
+    let sleeperOffset = (totalDistance * 35) % 24;
     for (let x = -sleeperOffset - 24; x < canvas.width + 24; x += 24) {
         ctx.fillRect(x, railY - 4, 10, 15);
     }
@@ -858,7 +929,6 @@ function drawDetailedTracks(railY) {
     ctx.fillStyle = '#8a95a5';
     ctx.fillRect(0, railY - 4, canvas.width, 4);
 }
-
 function drawTrain(railY) {
     let totalTrainWidth = 0;
     activeTrainCars.forEach((car, index) => {
@@ -895,7 +965,7 @@ function drawTrain(railY) {
 
 function drawPlatformAndPeople(railY) {
     route.forEach(station => {
-        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 15;
+        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
 
         if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
             const platformWidth = 1100;

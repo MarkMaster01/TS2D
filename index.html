@@ -14,153 +14,75 @@
     <script src="souprava.js"></script>
 
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #121212;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #121212; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
 
         .top-navbar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 50px;
-            background: #1e1e1e;
-            border-bottom: 1px solid #333;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
+            position: absolute; top: 0; left: 0; width: 100vw; height: 50px;
+            background: #1e1e1e; border-bottom: 1px solid #333; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 20px;
         }
-        .nav-title { font-size: 18px; font-weight: bold; color: #4db8ff; }
+        .nav-title { font-size: 18px; font-weight: bold; color: #4db8ff; cursor: pointer; }
         .points-display { background: #27ae60; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
         .nav-btn { background: #333; color: #fff; border: 1px solid #555; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 10px; }
         .nav-btn:hover { background: #444; }
 
-        .screen {
-            position: absolute;
-            top: 50px;
-            left: 0;
-            width: 100vw;
-            height: calc(100vh - 50px);
-            display: none;
+        .screen { position: absolute; top: 50px; left: 0; width: 100vw; height: calc(100vh - 50px); display: none; }
+
+        /* LOBBY / HLAVNÍ MENU */
+        #mainMenuScreen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('pozadi.jpg') center/cover no-repeat #1a1a1a;
+            text-align: center;
         }
-        
+        .menu-card { background: rgba(20, 20, 20, 0.85); backdrop-filter: blur(10px); padding: 40px 60px; border-radius: 12px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .menu-title { font-size: 36px; margin-bottom: 10px; color: #4db8ff; }
+        .menu-sub { color: #ccc; margin-bottom: 30px; }
+        .menu-buttons { display: flex; flex-direction: column; gap: 15px; width: 280px; margin: 0 auto; }
+        .menu-btn { padding: 14px; font-size: 16px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; color: white; }
+        .btn-play { background: #27ae60; } .btn-play:hover { background: #2ecc71; }
+        .btn-depot { background: #2980b9; } .btn-depot:hover { background: #3498db; }
+        .btn-shop { background: #8e44ad; } .btn-shop:hover { background: #9b59b6; }
+
+        /* MAPA */
         #mapScreen { display: flex; flex-direction: column; background-color: #1a1a1a; }
-        #mapHeader {
-            padding: 12px 25px;
-            background: #222;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-        }
+        #mapHeader { padding: 12px 25px; background: #222; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
         .search-box { position: relative; display: flex; align-items: center; gap: 10px; }
-        .search-input {
-            padding: 8px 14px;
-            background: #333;
-            border: 1px solid #555;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-            width: 250px;
-            outline: none;
-        }
+        .search-input { padding: 8px 14px; background: #333; border: 1px solid #555; border-radius: 6px; color: #fff; font-size: 14px; width: 250px; outline: none; }
         .search-input:focus { border-color: #4db8ff; }
-        .suggestions-list {
-            position: absolute;
-            top: 40px;
-            left: 0;
-            width: 250px;
-            background: #222;
-            border: 1px solid #444;
-            border-radius: 6px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
+        .suggestions-list { position: absolute; top: 40px; left: 0; width: 250px; background: #222; border: 1px solid #444; border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; }
         .suggestion-item { padding: 8px 12px; cursor: pointer; font-size: 13px; }
         .suggestion-item:hover { background: #004488; }
-        .start-btn {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+        .start-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
         .start-btn:disabled { background: #555; cursor: not-allowed; opacity: 0.6; }
-        .start-btn:hover:not(:disabled) { background: #2ecc71; }
         #mapContainer { flex: 1; width: 100%; height: 100%; }
 
-        #garageScreen { background: #1a1a1a; padding: 25px; overflow-y: auto; }
-        .garage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .garage-card { background: #252525; border: 1px solid #383838; border-radius: 8px; padding: 20px; }
-        .garage-card h3 { color: #4db8ff; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; }
-        .shop-item { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
-        .buy-btn { background: #2980b9; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        /* DEPO & OBCHOD */
+        .sub-nav { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        #garageScreen, #shopScreen { background: #1a1a1a; padding: 25px; overflow-y: auto; }
+        .depot-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .depot-preview-card { background: #252525; border: 1px solid #383838; border-radius: 8px; padding: 15px; }
+        #depotCanvas { width: 100%; height: 140px; background: #111; border-radius: 6px; border: 1px solid #444; }
+        
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .shop-card { background: #252525; border: 1px solid #383838; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; }
+        .shop-card img { max-height: 50px; max-width: 100%; object-fit: contain; margin: 10px 0; }
+        .buy-btn { background: #2980b9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 8px; }
         .buy-btn:disabled { background: #555; cursor: not-allowed; }
-        .owned-badge { background: #27ae60; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; }
+        .owned-badge { background: #27ae60; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; width: 100%; margin-top: 8px; border: none; cursor: pointer; }
 
+        /* HUD SIMULÁTORU */
         #gameScreen { position: absolute; top: 50px; left: 0; width: 100vw; height: calc(100vh - 50px); display: none; }
         #gameCanvas { display: block; width: 100vw; height: calc(100vh - 50px); }
-        .hud-overlay {
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 95%;
-            max-width: 1200px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-        }
-        .ui-panel {
-            padding: 12px 20px;
-            background: rgba(20, 20, 20, 0.88);
-            backdrop-filter: blur(8px);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-            pointer-events: auto;
-        }
+        .hud-overlay { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); width: 95%; max-width: 1200px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .ui-panel { padding: 12px 20px; background: rgba(20, 20, 20, 0.88); backdrop-filter: blur(8px); border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.15); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6); pointer-events: auto; }
         .ui-item { display: flex; flex-direction: column; align-items: center; }
         .ui-label { font-size: 11px; color: #aaa; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px; }
         .ui-value { font-size: 22px; font-weight: bold; color: #4db8ff; }
         .doors-open { color: #ff9933 !important; animation: blink 1s infinite; }
         .doors-closed { color: #4dff88 !important; }
         @keyframes blink { 50% { opacity: 0.5; } }
-        .controls-info {
-            padding: 8px 15px;
-            background: rgba(15, 15, 15, 0.85);
-            backdrop-filter: blur(5px);
-            border-radius: 6px;
-            color: #ccc;
-            font-size: 12px;
-            display: flex;
-            justify-content: space-around;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            pointer-events: auto;
-        }
+        .controls-info { padding: 8px 15px; background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(5px); border-radius: 6px; color: #ccc; font-size: 12px; display: flex; justify-content: space-around; border: 1px solid rgba(255, 255, 255, 0.1); pointer-events: auto; }
         .key-badge { background: #333; padding: 2px 6px; border-radius: 4px; color: #fff; font-weight: bold; border: 1px solid #555; }
         .station-banner { background: #003366; color: #fff; padding: 4px 12px; border-radius: 4px; font-weight: bold; border: 1px solid #0055a5; }
     </style>
@@ -168,16 +90,31 @@
 <body>
 
     <div class="top-navbar">
-        <div class="nav-title">🚂 2D Vlakový Simulátor</div>
+        <div class="nav-title" onclick="showScreen('mainMenuScreen')">🚂 2D Vlakový Simulátor</div>
         <div>
             <span class="points-display">Body: <span id="playerPointsVal">0</span> PK</span>
+            <button class="nav-btn" onclick="showScreen('mainMenuScreen')">🏠 Menu</button>
             <button class="nav-btn" onclick="showScreen('mapScreen')">🗺️ Mapa Trasy</button>
-            <button class="nav-btn" onclick="showScreen('garageScreen')">🔧 Garáž & Depo</button>
+            <button class="nav-btn" onclick="showScreen('garageScreen')">🚃 Depo</button>
+            <button class="nav-btn" onclick="showScreen('shopScreen')">🛒 Obchod</button>
+        </div>
+    </div>
+
+    <!-- 0. HLAVNÍ MENU / LOBBY -->
+    <div id="mainMenuScreen" class="screen" style="display: flex;">
+        <div class="menu-card">
+            <h1 class="menu-title">2D Vlakový Simulátor</h1>
+            <p class="menu-sub">Vyberte trasu, sestavte soupravu v depu a vyrazte na trať ČR</p>
+            <div class="menu-buttons">
+                <button class="menu-btn btn-play" onclick="showScreen('mapScreen')">🗺️ Vybrat Trasu & Vyjet</button>
+                <button class="menu-btn btn-depot" onclick="showScreen('garageScreen')">🚃 Depo (Sestavit Soupravu)</button>
+                <button class="menu-btn btn-shop" onclick="showScreen('shopScreen')">🛒 Obchod s Vozidly</button>
+            </div>
         </div>
     </div>
 
     <!-- 1. MAPA -->
-    <div id="mapScreen" class="screen" style="display: flex;">
+    <div id="mapScreen" class="screen">
         <div id="mapHeader">
             <div>
                 <h2 style="font-size: 18px; color: #4db8ff;">Výběr trasy po ČR</h2>
@@ -194,25 +131,48 @@
         <div id="mapContainer"></div>
     </div>
 
-    <!-- 2. GARÁŽ / DEPO -->
+    <!-- 2. DEPO (SESTAVENÍ SOUPRAVY A ŽIVÝ NÁHLED) -->
     <div id="garageScreen" class="screen">
-        <div class="garage-grid">
-            <div class="garage-card">
-                <h3>🛒 Obchod s Vozidly</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Koupená vozidla máš navždy a můžeš je opakovaně zařazovat do soupravy:</p>
-                <div id="shopList"></div>
+        <div class="depot-container">
+            <div class="sub-nav">
+                <button class="nav-btn" style="background:#27ae60; margin:0;" onclick="showScreen('garageScreen')">🚃 Depo</button>
+                <button class="nav-btn" style="margin:0;" onclick="showScreen('shopScreen')">🛒 Obchod s Vozidly ➔</button>
             </div>
 
-            <div class="garage-card">
-                <h3>🚃 Moje Aktuální Souprava</h3>
-                <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">S touto soupravou vyjedeš na trať:</p>
-                <div id="currentTrainList" style="margin-bottom: 15px;"></div>
-                <button onclick="saveTrainAssembly()" style="background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Uložit Soupravu do Hry</button>
+            <div class="depot-preview-card">
+                <h3 style="color:#4db8ff; margin-bottom: 8px;">Živý náhled vaší soupravy na kolejích</h3>
+                <canvas id="depotCanvas"></canvas>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="garage-card" style="background:#252525; border:1px solid #383838; border-radius:8px; padding:20px;">
+                    <h3 style="color:#4db8ff; margin-bottom:10px; border-bottom:1px solid #444; padding-bottom:8px;">🚃 Aktuální Souprava</h3>
+                    <div id="currentTrainList" style="margin-bottom: 15px;"></div>
+                    <button onclick="saveTrainAssembly()" style="background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Uložit Soupravu do Hry</button>
+                </div>
+
+                <div class="garage-card" style="background:#252525; border:1px solid #383838; border-radius:8px; padding:20px;">
+                    <h3 style="color:#4db8ff; margin-bottom:10px; border-bottom:1px solid #444; padding-bottom:8px;">📦 Moje Vlastněná Vozidla</h3>
+                    <p style="font-size: 12px; color: #aaa; margin-bottom: 12px;">Kliknutím přidáš vozidlo do soupravy:</p>
+                    <div id="ownedVehiclesList"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. SIMULÁTOR -->
+    <!-- 3. OBCHOD S VOZIDLY -->
+    <div id="shopScreen" class="screen">
+        <div class="depot-container">
+            <div class="sub-nav">
+                <button class="nav-btn" style="margin:0;" onclick="showScreen('garageScreen')">⬅ Zpět do Depa</button>
+                <button class="nav-btn" style="background:#8e44ad; margin:0;" onclick="showScreen('shopScreen')">🛒 Obchod s Vozidly</button>
+            </div>
+            <h2 style="color:#4db8ff; margin-bottom:15px;">🛒 Katalog Vozidel k Zakoupení</h2>
+            <div id="shopList" class="shop-grid"></div>
+        </div>
+    </div>
+
+    <!-- 4. SIMULÁTOR -->
     <div id="gameScreen" class="screen">
         <canvas id="gameCanvas"></canvas>
 
@@ -284,7 +244,8 @@ let playerPoints = parseInt(localStorage.getItem('ts2d_points')) || 100;
 let ownedVehicles = JSON.parse(localStorage.getItem('ts2d_owned')) || [];
 
 // Načtení výchozí soupravy ze souprava.js
-let activeTrainCars = (typeof trainCarsData !== 'undefined' ? trainCarsData : [])
+let savedAssembly = JSON.parse(localStorage.getItem('ts2d_assembly'));
+let activeTrainCars = savedAssembly || (typeof trainCarsData !== 'undefined' ? trainCarsData : []);
 
 function saveGameState() {
     localStorage.setItem('ts2d_points', playerPoints);
@@ -299,38 +260,45 @@ function updatePointsDisplay() {
 
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-    document.getElementById(screenId).style.display = screenId === 'mapScreen' ? 'flex' : 'block';
-    if (screenId === 'garageScreen') renderGarage();
+    document.getElementById(screenId).style.display = (screenId === 'mapScreen' || screenId === 'mainMenuScreen') ? 'flex' : 'block';
+    
+    if (screenId === 'garageScreen') {
+        renderDepot();
+    } else if (screenId === 'shopScreen') {
+        renderShop();
+    } else if (screenId === 'mapScreen' && map) {
+        setTimeout(() => map.invalidateSize(), 200);
+    }
 }
 
-// GARÁŽ & OBCHOD
-function renderGarage() {
+// OBCHOD
+function renderShop() {
     const shopContainer = document.getElementById('shopList');
     shopContainer.innerHTML = '';
     const shopData = getShopVehiclesData();
 
     shopData.forEach(item => {
         let isOwned = ownedVehicles.includes(item.file);
-        let div = document.createElement('div');
-        div.className = 'shop-item';
+        let card = document.createElement('div');
+        card.className = 'shop-card';
         
-        let buttonHtml = '';
-        if (isOwned) {
-            buttonHtml = `<button class="owned-badge" onclick="addCarToTrain('${item.label}', '${item.file}')">+ Přidat do soupravy</button>`;
-        } else {
-            buttonHtml = `<button class="buy-btn" ${playerPoints < item.price ? 'disabled' : ''} onclick="buyVehicle('${item.file}', ${item.price})">Koupit (${item.price} PK)</button>`;
-        }
+        let imgSrc = (item.file.startsWith('http://') || item.file.startsWith('https://')) 
+            ? item.file 
+            : 'Vozidla/' + item.file;
 
-        let displayPath = item.file.length > 30 ? item.file.substring(0, 30) + '...' : item.file;
+        let buttonHtml = isOwned 
+            ? `<button class="owned-badge" disabled>✓ Vlastněno</button>`
+            : `<button class="buy-btn" ${playerPoints < item.price ? 'disabled' : ''} onclick="buyVehicle('${item.file}', ${item.price})">Koupit za ${item.price} PK</button>`;
 
-        div.innerHTML = `
-            <div><strong>${item.label}</strong><br><span style="color:#aaa; font-size:11px;">Odkaz: ${displayPath}</span></div>
-            <div>${buttonHtml}</div>
+        card.innerHTML = `
+            <div>
+                <strong style="color:#4db8ff; font-size:15px;">${item.label}</strong>
+            </div>
+            <img src="${imgSrc}" alt="${item.label}" onerror="this.src='https://via.placeholder.com/150x50?text=Vozidlo'">
+            <div style="width:100%;">${buttonHtml}</div>
         `;
-        shopContainer.appendChild(div);
+        shopContainer.appendChild(card);
     });
-
-    renderCurrentTrain();
 }
 
 function buyVehicle(file, price) {
@@ -338,41 +306,144 @@ function buyVehicle(file, price) {
         playerPoints -= price;
         if (!ownedVehicles.includes(file)) ownedVehicles.push(file);
         saveGameState();
-        renderGarage();
+        renderShop();
     }
 }
 
-function addCarToTrain(label, file) {
-    let type = label.toLowerCase().includes('lokomotiva') ? 'loco' : 'wagon';
-    activeTrainCars.push({ type: type, targetHeight: 70, color: '#0275d8', label: label.split(' ')[1] || 'Vozidlo', file: file });
+// DEPO & Sklad
+function renderDepot() {
+    renderCurrentTrainList();
+    renderOwnedList();
+    drawDepotPreview();
+}
+
+function renderOwnedList() {
+    const ownedContainer = document.getElementById('ownedVehiclesList');
+    ownedContainer.innerHTML = '';
+    const shopData = getShopVehiclesData();
+
+    if (ownedVehicles.length === 0) {
+        ownedContainer.innerHTML = '<p style="color:#888; font-size:13px;">Zatím nevlastníte žádná zakoupená vozidla. Navštivte Obchod!</p>';
+        return;
+    }
+
+    ownedVehicles.forEach(file => {
+        let vehicleInfo = shopData.find(v => v.file === file) || { label: file, file: file };
+        let div = document.createElement('div');
+        div.style.cssText = "background:#333; padding:8px 12px; margin-bottom:6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;";
+        
+        div.innerHTML = `
+            <span style="font-size:13px;"><strong>${vehicleInfo.label}</strong></span>
+            <button onclick="addCarToTrain('${vehicleInfo.label}', '${vehicleInfo.file}')" style="background:#27ae60; color:white; border:none; padding:4px 10px; border-radius:3px; cursor:pointer; font-weight:bold;">+ Přidat</button>
+        `;
+        ownedContainer.appendChild(div);
+    });
+}
+
+function addCarToTrain(fullLabel, file) {
+    let type = fullLabel.toLowerCase().includes('lokomotiva') ? 'loco' : 'wagon';
+    // Ponechán celý název vozidla
+    activeTrainCars.push({ 
+        type: type, 
+        targetHeight: 70, 
+        color: '#0275d8', 
+        label: fullLabel, 
+        file: file 
+    });
     saveGameState();
-    renderCurrentTrain();
+    renderDepot();
 }
 
 function removeCarFromTrain(index) {
     if (activeTrainCars.length > 1) {
         activeTrainCars.splice(index, 1);
         saveGameState();
-        renderCurrentTrain();
+        renderDepot();
+    } else {
+        alert("Souprava musí obsahovat alespoň jedno vozidlo!");
     }
 }
 
-function renderCurrentTrain() {
+function moveCarInTrain(index, direction) {
+    let newIndex = index + direction;
+    if (newIndex >= 0 && newIndex < activeTrainCars.length) {
+        let temp = activeTrainCars[index];
+        activeTrainCars[index] = activeTrainCars[newIndex];
+        activeTrainCars[newIndex] = temp;
+        saveGameState();
+        renderDepot();
+    }
+}
+
+function renderCurrentTrainList() {
     const trainList = document.getElementById('currentTrainList');
     trainList.innerHTML = '';
+    
     activeTrainCars.forEach((car, idx) => {
         let div = document.createElement('div');
         div.style.cssText = "background:#333; padding:8px 12px; margin-bottom:6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;";
-        let shortName = car.file.startsWith('http') ? car.file.split('/').pop() : car.file;
-        div.innerHTML = `<span><strong>${idx + 1}.</strong> ${car.label || shortName}</span> <button onclick="removeCarFromTrain(${idx})" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:3px 8px; cursor:pointer;">Odebrat</button>`;
+        
+        div.innerHTML = `
+            <span style="font-size:13px;"><strong>${idx + 1}.</strong> ${car.label}</span>
+            <div>
+                <button onclick="moveCarInTrain(${idx}, -1)" style="background:#555; color:white; border:none; padding:2px 6px; border-radius:3px; cursor:pointer;">▲</button>
+                <button onclick="moveCarInTrain(${idx}, 1)" style="background:#555; color:white; border:none; padding:2px 6px; border-radius:3px; cursor:pointer;">▼</button>
+                <button onclick="removeCarFromTrain(${idx})" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:2px 8px; cursor:pointer; margin-left:5px;">Odebrat</button>
+            </div>
+        `;
         trainList.appendChild(div);
+    });
+}
+
+// ŽIVÝ NÁHLED SOUPRAVY V DEPU
+function drawDepotPreview() {
+    const dCanvas = document.getElementById('depotCanvas');
+    const dCtx = dCanvas.getContext('2d');
+    dCanvas.width = dCanvas.offsetWidth;
+    dCanvas.height = dCanvas.offsetHeight;
+
+    dCtx.clearRect(0, 0, dCanvas.width, dCanvas.height);
+    const railY = dCanvas.height * 0.75;
+
+    // Kolej
+    dCtx.fillStyle = '#4a4441';
+    dCtx.fillRect(0, railY - 4, dCanvas.width, 12);
+    dCtx.fillStyle = '#8a95a5';
+    dCtx.fillRect(0, railY - 2, dCanvas.width, 3);
+
+    loadTrainImages();
+
+    let totalWidth = 0;
+    activeTrainCars.forEach(car => { totalWidth += (car.width || 180) + 6; });
+
+    let startX = (dCanvas.width / 2) - (totalWidth / 2);
+
+    activeTrainCars.forEach((car, index) => {
+        const carHeight = car.height || 60;
+        const carWidth = car.width || 180;
+        const trainY = railY - carHeight;
+
+        if (car.imgLoaded) {
+            dCtx.drawImage(car.img, startX, trainY, carWidth, carHeight);
+        } else {
+            dCtx.fillStyle = '#777';
+            dCtx.fillRect(startX, trainY, carWidth, carHeight);
+        }
+
+        // Spřáhlo
+        if (index < activeTrainCars.length - 1) {
+            dCtx.fillStyle = '#000';
+            dCtx.fillRect(startX + carWidth, trainY + carHeight - 14, 6, 4);
+        }
+
+        startX += carWidth + 6;
     });
 }
 
 function saveTrainAssembly() {
     saveGameState();
     loadTrainImages();
-    alert("Souprava byla úspěšně uložena! Můžeš vyrazit na trať.");
+    alert("Souprava byla úspěšně uložena!");
 }
 
 // MAPA & VYHLEDÁVÁNÍ
@@ -580,23 +651,25 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
-// PODPORA PRO URL ODKAZY Z VAGONWEBU AJ.
+// NAČÍTÁNÍ OBRÁZKŮ VOZIDEL (EXTERNÍ I LOKÁLNÍ)
 function loadTrainImages() {
     activeTrainCars.forEach(car => {
-        car.img = new Image();
-        car.imgLoaded = false;
+        if (!car.img) {
+            car.img = new Image();
+            car.imgLoaded = false;
 
-        car.img.onload = () => {
-            const aspectRatio = car.img.width / car.img.height;
-            car.width = (car.targetHeight || 70) * aspectRatio;
-            car.height = car.targetHeight || 70;
-            car.imgLoaded = true;
-        };
+            car.img.onload = () => {
+                const aspectRatio = car.img.width / car.img.height;
+                car.width = (car.targetHeight || 70) * aspectRatio;
+                car.height = car.targetHeight || 70;
+                car.imgLoaded = true;
+            };
 
-        if (car.file.startsWith('http://') || car.file.startsWith('https://')) {
-            car.img.src = car.file;
-        } else {
-            car.img.src = VEHICLES_FOLDER + car.file;
+            if (car.file.startsWith('http://') || car.file.startsWith('https://')) {
+                car.img.src = car.file;
+            } else {
+                car.img.src = VEHICLES_FOLDER + car.file;
+            }
         }
     });
 }
@@ -667,28 +740,30 @@ function startPassengerExchange() {
 }
 
 function update() {
-    let activeThrottle = doorsOpen ? 0 : throttle;
+    if (document.getElementById('gameScreen').style.display === 'block') {
+        let activeThrottle = doorsOpen ? 0 : throttle;
 
-    let accel = throttleAcceleration[activeThrottle];
-    let decel = brakeDeceleration[brake] + naturalFriction;
+        let accel = throttleAcceleration[activeThrottle];
+        let decel = brakeDeceleration[brake] + naturalFriction;
 
-    if (accel > 0) {
-        speedKmh += accel * dt;
-        if (speedKmh > maxSpeedKmh) speedKmh = maxSpeedKmh;
+        if (accel > 0) {
+            speedKmh += accel * dt;
+            if (speedKmh > maxSpeedKmh) speedKmh = maxSpeedKmh;
+        }
+
+        if (decel > 0) {
+            speedKmh -= decel * dt;
+            if (speedKmh < 0) speedKmh = 0;
+        }
+
+        let speedMs = (speedKmh / 3.6);
+        totalDistance += speedMs * dt * direction;
+
+        windCloudOffset += 0.3;
+
+        updateUI();
+        draw();
     }
-
-    if (decel > 0) {
-        speedKmh -= decel * dt;
-        if (speedKmh < 0) speedKmh = 0;
-    }
-
-    let speedMs = (speedKmh / 3.6);
-    totalDistance += speedMs * dt * direction;
-
-    windCloudOffset += 0.3;
-
-    updateUI();
-    draw();
     requestAnimationFrame(update);
 }
 
@@ -767,27 +842,27 @@ function drawSkyAndClouds(railY) {
 }
 
 function drawFarHills(railY) {
-    // 1. Zadní vysoké pohoří (pohybuje se velmi pomalu)
-    ctx.fillStyle = '#1e2b37';
+    // 1. Zadní vysoké pohoří (světlejší modro-šedá mlžná barva v dálce)
+    ctx.fillStyle = '#5c768d';
     ctx.beginPath();
     ctx.moveTo(0, railY);
-    let backOffset = (totalDistance * 0.02) % 1200;
+    let backOffset = (totalDistance * 0.03) % 1200;
     for (let x = -backOffset - 1200; x < canvas.width + 1200; x += 600) {
-        ctx.quadraticCurveTo(x + 300, railY - 240, x + 600, railY);
+        ctx.quadraticCurveTo(x + 300, railY - 220, x + 600, railY);
     }
     ctx.fill();
 
-    // 2. Přední nižší kopce (pohybuje se o něco rychleji)
-    let frontGradient = ctx.createLinearGradient(0, railY - 180, 0, railY);
-    frontGradient.addColorStop(0, '#2c3e50');
-    frontGradient.addColorStop(1, '#1b2631');
+    // 2. Přední kopce (tmavší zelenavý kontrast v popředí)
+    let frontGradient = ctx.createLinearGradient(0, railY - 150, 0, railY);
+    frontGradient.addColorStop(0, '#34495e');
+    frontGradient.addColorStop(1, '#1e2b37');
     ctx.fillStyle = frontGradient;
     
     ctx.beginPath();
     ctx.moveTo(0, railY);
-    let frontOffset = (totalDistance * 0.08) % 900;
-    for (let x = -frontOffset - 900; x < canvas.width + 900; x += 450) {
-        ctx.quadraticCurveTo(x + 225, railY - 160, x + 450, railY);
+    let frontOffset = (totalDistance * 0.1) % 800;
+    for (let x = -frontOffset - 800; x < canvas.width + 800; x += 400) {
+        ctx.quadraticCurveTo(x + 200, railY - 130, x + 400, railY);
     }
     ctx.fill();
 }
@@ -799,30 +874,30 @@ function drawGrassField(railY) {
 
 function drawProceduralTrees(railY) {
     const treeSpacing = 160;
-    const startIdx = Math.floor((totalDistance * 10 - canvas.width) / treeSpacing) - 2;
-    const endIdx = Math.floor((totalDistance * 10 + canvas.width * 2) / treeSpacing) + 2;
+    const startIdx = Math.floor((totalDistance * 35 - canvas.width) / treeSpacing) - 5;
+    const endIdx = Math.floor((totalDistance * 35 + canvas.width * 2) / treeSpacing) + 5;
 
     for (let i = startIdx; i <= endIdx; i++) {
         let seed = pseudoRandom(i * 999);
         
-        if (seed > 0.45) {
+        if (seed > 0.40) {
             let worldX = i * treeSpacing;
             let screenX = worldX - (totalDistance * 35) + canvas.width * 0.5;
 
-            let treeHeight = 55 + (seed * 35);
-            let treeY = railY - 8;
+            let treeHeight = 60 + (seed * 40);
+            let treeY = railY - 4;
 
-            ctx.fillStyle = '#4a2e00';
-            ctx.fillRect(screenX - 4, treeY - treeHeight * 0.4, 8, treeHeight * 0.4);
+            ctx.fillStyle = '#3e2723';
+            ctx.fillRect(screenX - 4, treeY - treeHeight * 0.35, 8, treeHeight * 0.35);
 
-            ctx.fillStyle = i % 2 === 0 ? '#1e4620' : '#143516';
+            ctx.fillStyle = i % 2 === 0 ? '#1b5e20' : '#2e7d32';
             for (let layer = 0; layer < 3; layer++) {
-                let layerY = treeY - treeHeight * 0.3 - (layer * treeHeight * 0.22);
-                let layerWidth = (3 - layer) * 14 + (seed * 8);
+                let layerY = treeY - treeHeight * 0.25 - (layer * treeHeight * 0.22);
+                let layerWidth = (3 - layer) * 15 + (seed * 8);
                 
                 ctx.beginPath();
                 ctx.moveTo(screenX - layerWidth, layerY);
-                ctx.lineTo(screenX, layerY - treeHeight * 0.25);
+                ctx.lineTo(screenX, layerY - treeHeight * 0.28);
                 ctx.lineTo(screenX + layerWidth, layerY);
                 ctx.fill();
             }
@@ -840,15 +915,12 @@ function drawStationBuilding(railY) {
             const bLeft = stationScreenX - bWidth / 2;
             const bTop = railY - bHeight - 15;
 
-            // Hlavní tělo budovy
             ctx.fillStyle = '#d5dbdb';
             ctx.fillRect(bLeft, bTop, bWidth, bHeight);
 
-            // Cihlový/kamenný sokl dole
             ctx.fillStyle = '#7f8c8d';
             ctx.fillRect(bLeft, railY - 30, bWidth, 15);
 
-            // Střecha s přeshem
             ctx.fillStyle = '#902c1d';
             ctx.beginPath();
             ctx.moveTo(bLeft - 30, bTop);
@@ -856,20 +928,17 @@ function drawStationBuilding(railY) {
             ctx.lineTo(bLeft + bWidth + 30, bTop);
             ctx.fill();
 
-            // Okna na budově (horní patro)
             ctx.fillStyle = '#2c3e50';
             for (let wx = bLeft + 40; wx < bLeft + bWidth - 40; wx += 65) {
                 ctx.fillRect(wx, bTop + 25, 35, 45);
-                ctx.fillStyle = '#85c1e9'; // Odlesk okna
+                ctx.fillStyle = '#85c1e9';
                 ctx.fillRect(wx + 3, bTop + 28, 14, 39);
                 ctx.fillStyle = '#2c3e50';
             }
 
-            // Vchodové dveře (dole)
             ctx.fillStyle = '#4a235a';
             ctx.fillRect(stationScreenX - 25, railY - 75, 50, 45);
 
-            // Staniční hodiny
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(stationScreenX, bTop + 22, 14, 0, Math.PI * 2);
@@ -878,7 +947,6 @@ function drawStationBuilding(railY) {
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Cedule s názvem stanice
             ctx.fillStyle = '#00284d';
             ctx.fillRect(stationScreenX - 150, bTop - 15, 300, 32);
             ctx.strokeStyle = '#ffffff';
@@ -894,13 +962,11 @@ function drawStationBuilding(railY) {
 }
 
 function drawDetailedTracks(railY) {
-    // Zjištění, zda se Blížíme/jsme ve větší stanici pro vykreslení 2. koleje v pozadí
     let isBigStationNearby = route.some(st => {
         let dist = Math.abs(st.position - totalDistance) * 35;
         return dist < 1500 && (st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň"));
     });
 
-    // 2. KOLEJ V POZADÍ (pokud jsme ve větší stanici)
     if (isBigStationNearby) {
         const backRailY = railY - 22;
         ctx.fillStyle = '#3a3533';
@@ -916,7 +982,6 @@ function drawDetailedTracks(railY) {
         ctx.fillRect(0, backRailY - 2, canvas.width, 3);
     }
 
-    // HLAVNÍ KOLEJ V POPŘEDÍ
     ctx.fillStyle = '#4a4441';
     ctx.fillRect(0, railY - 8, canvas.width, 22);
 
@@ -929,6 +994,7 @@ function drawDetailedTracks(railY) {
     ctx.fillStyle = '#8a95a5';
     ctx.fillRect(0, railY - 4, canvas.width, 4);
 }
+
 function drawTrain(railY) {
     let totalTrainWidth = 0;
     activeTrainCars.forEach((car, index) => {
@@ -1007,7 +1073,7 @@ function drawPlatformAndPeople(railY) {
     });
 }
 
-// Spuštění
+// Spuštění cyklu
 update();
 </script>
 

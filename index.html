@@ -99,10 +99,16 @@
         .lever-handle { width: 22px; height: 10px; background: #4db8ff; border-radius: 3px; position: absolute; left: -6px; transition: bottom 0.15s ease; box-shadow: 0 0 5px rgba(77, 184, 255, 0.8); }
         .gauge-canvas { width: 70px; height: 70px; }
 
-        /* MODÁLNÍ OKNO NASTAVENÍ */
-        #settingsModal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); display: none; justify-content: center; align-items: center; z-index: 300; }
-        .modal-content { background: #222; border: 1px solid #444; border-radius: 10px; padding: 25px; width: 360px; display: flex; flex-direction: column; gap: 15px; }
+        /* MODÁLNÍ OKNA */
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 300; }
+        .modal-content { background: #222; border: 1px solid #444; border-radius: 12px; padding: 25px; width: 400px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        
+        /* VYHODNOCOVACÍ MODAL */
+        .summary-card { text-align: center; }
+        .summary-title { color: #2ecc71; font-size: 24px; margin-bottom: 5px; }
+        .summary-stat { background: #181818; padding: 10px 15px; border-radius: 6px; border: 1px solid #333; display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .summary-value { color: #4db8ff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -112,7 +118,7 @@
         <div>
             <span class="points-display">Body: <span id="playerPointsVal">0</span> PK</span>
             <button class="nav-btn" onclick="showScreen('mainMenuScreen')">🏠 Menu</button>
-            <button class="nav-btn" onclick="showScreen('mapScreen')">🗺️ Mapa Trasy</button>
+            <button class="nav-btn" onclick="resetAndShowMap()">🗺️ Mapa Trasy</button>
             <button class="nav-btn" onclick="showScreen('garageScreen')">🚃 Depo</button>
             <button class="nav-btn" onclick="showScreen('shopScreen')">🛒 Obchod</button>
         </div>
@@ -124,7 +130,7 @@
             <h1 class="menu-title">2D Vlakový Simulátor</h1>
             <p class="menu-sub">Vyberte trasu, sestavte soupravu v depu a vyrazte na trať ČR</p>
             <div class="menu-buttons">
-                <button class="menu-btn btn-play" onclick="showScreen('mapScreen')">🗺️ Vybrat Trasu & Vyjet</button>
+                <button class="menu-btn btn-play" onclick="resetAndShowMap()">🗺️ Vybrat Trasu & Vyjet</button>
                 <button class="menu-btn btn-depot" onclick="showScreen('garageScreen')">🚃 Depo (Sestavit Soupravu)</button>
                 <button class="menu-btn btn-shop" onclick="showScreen('shopScreen')">🛒 Obchod s Vozidly</button>
             </div>
@@ -300,7 +306,7 @@
     </div>
 
     <!-- MODÁLNÍ OKNO NASTAVENÍ -->
-    <div id="settingsModal">
+    <div id="settingsModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="color:#4db8ff; border-bottom:1px solid #444; padding-bottom:8px;">⚙️ Nastavení Simulátoru</h3>
             <div class="setting-row">
@@ -315,6 +321,36 @@
                 <input type="checkbox" id="showControlsCheck" checked onchange="toggleControlsHelp(this.checked)">
             </div>
             <button onclick="closeSettingsModal()" style="background:#27ae60; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:10px;">Zavřít</button>
+        </div>
+    </div>
+
+    <!-- MODÁLNÍ OKNO VYHODNOCENÍ TRASY -->
+    <div id="summaryModal" class="modal-overlay">
+        <div class="modal-content summary-card">
+            <h2 class="summary-title">🏁 Cílová stanice dojeta!</h2>
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;">Úspěšně jste dokončili jízdu podle jízdního řádu.</p>
+            
+            <div class="summary-stat">
+                <span>Čas jízdy:</span>
+                <span class="summary-value" id="summaryTime">00:00</span>
+            </div>
+            <div class="summary-stat">
+                <span>Odbaveno cestujících:</span>
+                <span class="summary-value" id="summaryPassengers">0</span>
+            </div>
+            <div class="summary-stat">
+                <span>Získané body na trase:</span>
+                <span class="summary-value" id="summaryPoints">+0 PK</span>
+            </div>
+            <div class="summary-stat">
+                <span>Průměrná rychlost:</span>
+                <span class="summary-value" id="summaryAvgSpeed">0 km/h</span>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button onclick="resetAndShowMap()" style="flex:1; background:#27ae60; color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">🗺️ Nová Trasa</button>
+                <button onclick="showScreen('mainMenuScreen'); closeSummaryModal();" style="flex:1; background:#2980b9; color:#fff; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">🏠 Menu</button>
+            </div>
         </div>
     </div>
 
@@ -342,6 +378,13 @@ let showControls = localStorage.getItem('ts2d_showControls') !== 'false';
 // Filtry
 let currentShopFilter = 'all';
 let currentDepotFilter = 'all';
+
+// Statistiky jízdy
+let tripStartTime = 0;
+let tripPointsEarned = 0;
+let tripPassengersHandled = 0;
+let tripSpeedSum = 0;
+let tripSpeedTicks = 0;
 
 function saveGameState() {
     localStorage.setItem('ts2d_points', playerPoints);
@@ -382,6 +425,19 @@ function showScreen(screenId) {
     }
 }
 
+function resetAndShowMap() {
+    closeSummaryModal();
+    selectedStartStation = null;
+    selectedEndStation = null;
+    if (polyline && map) {
+        map.removeLayer(polyline);
+        polyline = null;
+    }
+    document.getElementById('routeText').innerHTML = 'Klikněte na mapě nebo vyhledejte <strong>startovní stanici</strong>.';
+    document.getElementById('startTrainBtn').disabled = true;
+    showScreen('mapScreen');
+}
+
 // OBCHOD FILTROVÁNÍ & VYKRESLENÍ
 function setShopFilter(filter) {
     currentShopFilter = filter;
@@ -414,7 +470,7 @@ function renderShop() {
             ? item.file 
             : 'Vozidla/' + item.file;
 
-        let maxSpd = item.maxSpeed || 120;
+        let maxSpd = item.maxSpeed || item.maxspeed || 120;
         let buttonHtml = isOwned 
             ? `<button class="owned-badge" disabled>✓ Vlastněno</button>`
             : `<button class="buy-btn" ${playerPoints < item.price ? 'disabled' : ''} onclick="buyVehicle('${item.file}', ${item.price})">Koupit za ${item.price} PK</button>`;
@@ -485,16 +541,17 @@ function renderOwnedList() {
         let div = document.createElement('div');
         div.style.cssText = "background:#333; padding:8px 12px; margin-bottom:6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;";
         
+        let spd = vehicleInfo.maxSpeed || vehicleInfo.maxspeed || 120;
         div.innerHTML = `
             <span style="font-size:13px;"><strong>${vehicleInfo.label}</strong></span>
-            <button onclick="addCarToTrain('${vehicleInfo.label}', '${vehicleInfo.file}', ${vehicleInfo.maxSpeed || 120})" style="background:#27ae60; color:white; border:none; padding:4px 10px; border-radius:3px; cursor:pointer; font-weight:bold;">+ Přidat</button>
+            <button onclick="addCarToTrain('${vehicleInfo.label}', '${vehicleInfo.file}', ${spd})" style="background:#27ae60; color:white; border:none; padding:4px 10px; border-radius:3px; cursor:pointer; font-weight:bold;">+ Přidat</button>
         `;
         ownedContainer.appendChild(div);
     });
 }
 
 function addCarToTrain(fullLabel, file, maxSpd) {
-    let type = fullLabel.toLowerCase().includes('lokomotiva') ? 'loco' : 'wagon';
+    let type = (fullLabel.toLowerCase().includes('lokomotiva') || fullLabel.toLowerCase().includes('jednotka') || fullLabel.toLowerCase().includes('motorový')) ? 'loco' : 'wagon';
     activeTrainCars.push({ 
         type: type, 
         targetHeight: 55, 
@@ -779,6 +836,18 @@ function startSimulation() {
 
     currentStationIndex = 1;
     totalDistance = 0;
+    speedKmh = 0;
+    throttle = 0;
+    brake = 0;
+    direction = 0;
+    doorsOpen = false;
+
+    // Reset statistik pro závěrečné vyhodnocení
+    tripStartTime = Date.now();
+    tripPointsEarned = 0;
+    tripPassengersHandled = 0;
+    tripSpeedSum = 0;
+    tripSpeedTicks = 0;
 
     showScreen('gameScreen');
     loadTrainImages();
@@ -831,13 +900,14 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
-// NAČÍTÁNÍ OBRÁZKŮ VOZIDEL
+// NAČÍTÁNÍ OBRÁZKŮ VOZIDEL & OMEZENÍ RYCHLOSTI
 function loadTrainImages() {
-    let loco = activeTrainCars.find(c => c.type === 'loco' || c.label.toLowerCase().includes('lokomotiva'));
-    if (loco && loco.maxSpeed) {
-        maxSpeedKmh = loco.maxSpeed;
+    let loco = activeTrainCars.find(c => c.type === 'loco' || c.category === 'loco' || (c.label && (c.label.toLowerCase().includes('lokomotiva') || c.label.toLowerCase().includes('jednotka') || c.label.toLowerCase().includes('810') || c.label.toLowerCase().includes('motorov'))));
+    
+    if (loco) {
+        maxSpeedKmh = loco.maxSpeed || loco.maxspeed || 120;
     } else {
-        maxSpeedKmh = 130;
+        maxSpeedKmh = 120;
     }
 
     activeTrainCars.forEach(car => {
@@ -862,8 +932,9 @@ function loadTrainImages() {
     });
 }
 
-// NOVOVÝHOVUJÍCÍ KLÁVESOVÉ OVLÁDÁNÍ
+// KLÁVESOVÉ OVLÁDÁNÍ
 window.addEventListener('keydown', (e) => {
+    if (document.getElementById('gameScreen').style.display !== 'block') return;
     const key = e.key;
 
     // Dveře (Klávesa G)
@@ -915,10 +986,13 @@ function startPassengerExchange() {
             station.getOffCount--;
             totalPassengers--;
             playerPoints += 10;
+            tripPointsEarned += 10;
+            tripPassengersHandled++;
             saveGameState();
         } else if (station.getOnCount > 0) {
             station.getOnCount--;
             totalPassengers++;
+            tripPassengersHandled++;
         } else {
             clearInterval(timer);
             isExchangingPassengers = false;
@@ -927,10 +1001,33 @@ function startPassengerExchange() {
             setTimeout(() => {
                 if (currentStationIndex < route.length - 1) {
                     currentStationIndex++;
+                } else {
+                    // Dojeta konečná stanice
+                    showSummaryModal();
                 }
             }, 1000);
         }
     }, 150);
+}
+
+function showSummaryModal() {
+    let elapsedSeconds = Math.floor((Date.now() - tripStartTime) / 1000);
+    let mins = Math.floor(elapsedSeconds / 60);
+    let secs = elapsedSeconds % 60;
+    let timeStr = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+
+    let avgSpeed = tripSpeedTicks > 0 ? Math.round(tripSpeedSum / tripSpeedTicks) : 0;
+
+    document.getElementById('summaryTime').innerText = timeStr;
+    document.getElementById('summaryPassengers').innerText = tripPassengersHandled;
+    document.getElementById('summaryPoints').innerText = '+' + tripPointsEarned + ' PK';
+    document.getElementById('summaryAvgSpeed').innerText = avgSpeed + ' km/h';
+
+    document.getElementById('summaryModal').style.display = 'flex';
+}
+
+function closeSummaryModal() {
+    document.getElementById('summaryModal').style.display = 'none';
 }
 
 function update() {
@@ -942,6 +1039,7 @@ function update() {
 
         if (accel > 0) {
             speedKmh += accel * dt;
+            // DŮSLEDNÉ OMEZENÍ RYCHLOSTI PODLE MAXSPEED
             if (speedKmh > maxSpeedKmh) speedKmh = maxSpeedKmh;
         }
 
@@ -952,6 +1050,12 @@ function update() {
 
         let speedMs = (speedKmh / 3.6);
         totalDistance += speedMs * dt * direction;
+
+        // Statistiky průměrné rychlosti
+        if (speedKmh > 0) {
+            tripSpeedSum += speedKmh;
+            tripSpeedTicks++;
+        }
 
         windCloudOffset += 0.3;
 
@@ -966,7 +1070,7 @@ function updateUI() {
     if (direction === 1) dirText = 'Vpřed';
     if (direction === -1) dirText = 'Vzad';
 
-    document.getElementById('speedVal').innerText = Math.round(speedKmh) + ' km/h';
+    document.getElementById('speedVal').innerText = Math.round(speedKmh) + ' km/h (max ' + maxSpeedKmh + ')';
     document.getElementById('dirVal').innerText = dirText;
     document.getElementById('throttleVal').innerText = ((doorsOpen || direction === 0) ? 0 : throttle) + ' / 3';
 
@@ -1103,7 +1207,7 @@ function draw() {
     drawGrassField(railY);
     drawProceduralTrees(railY);
     drawStationBuilding(railY);
-    drawDetailedTracks(railY);
+    drawDetailedTracks(railY); // Zde se vykreslí hlavní kolej a druhá kolej pod stanicí
     drawTrain(railY);
     drawPlatformAndPeople(railY);
 }
@@ -1129,7 +1233,6 @@ function drawSkyAndClouds(railY) {
 }
 
 function drawFarHills(railY) {
-    // 1. Zadní vysoké pohoří (zvýšené a výraznější mlžný profil)
     ctx.fillStyle = '#5c768d';
     ctx.beginPath();
     ctx.moveTo(0, railY);
@@ -1139,7 +1242,6 @@ function drawFarHills(railY) {
     }
     ctx.fill();
 
-    // 2. Přední kopce (tmavší zelenavý kontrast v popředí)
     let frontGradient = ctx.createLinearGradient(0, railY - 180, 0, railY);
     frontGradient.addColorStop(0, '#34495e');
     frontGradient.addColorStop(1, '#1e2b37');
@@ -1192,7 +1294,7 @@ function drawProceduralTrees(railY) {
     }
 }
 
-// PROCEDURÁLNÍ RŮZNORODÉ STANIČNÍ BUDOVY (POSUNUTÉ NÍŽE K TERÉNU)
+// PROCEDURÁLNÍ RŮZNORODÉ STANIČNÍ BUDOVY
 function drawStationBuilding(railY) {
     route.forEach((station) => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
@@ -1208,21 +1310,17 @@ function drawStationBuilding(railY) {
             const bWidth = 480 + Math.floor(randStyle * 140);
             const bHeight = 120 + Math.floor(randStyle * 35);
             const bLeft = stationScreenX - bWidth / 2;
-            const bTop = railY - bHeight; // Budova leží přímo na úrovin terénu
+            const bTop = railY - bHeight;
 
-            // Pestřejší fasády
             let wallColors = ['#c0392b', '#d35400', '#f39c12', '#7f8c8d', '#bdc3c7', '#34495e', '#16a085'];
             let wallColor = wallColors[Math.floor(randColor * wallColors.length)];
 
-            // Tělo budovy
             ctx.fillStyle = wallColor;
             ctx.fillRect(bLeft, bTop, bWidth, bHeight);
 
-            // Sokl
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(bLeft, railY - 15, bWidth, 15);
 
-            // Střecha
             ctx.fillStyle = randStyle > 0.5 ? '#222' : '#7f8c8d';
             if (randStyle > 0.4) {
                 ctx.beginPath();
@@ -1234,7 +1332,6 @@ function drawStationBuilding(railY) {
                 ctx.fillRect(bLeft - 15, bTop - 10, bWidth + 30, 14);
             }
 
-            // Okna
             ctx.fillStyle = '#111';
             for (let wx = bLeft + 30; wx < bLeft + bWidth - 30; wx += 55) {
                 ctx.fillRect(wx, bTop + 20, 28, 38);
@@ -1243,11 +1340,9 @@ function drawStationBuilding(railY) {
                 ctx.fillStyle = '#111';
             }
 
-            // Vchodové dveře
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(stationScreenX - 22, railY - 50, 44, 50);
 
-            // Hodiny
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(stationScreenX, bTop + 20, 12, 0, Math.PI * 2);
@@ -1263,7 +1358,6 @@ function drawStationBuilding(railY) {
             ctx.lineTo(stationScreenX + 5, bTop + 20);
             ctx.stroke();
 
-            // Cedule s názvem stanice
             ctx.fillStyle = '#00284d';
             ctx.fillRect(stationScreenX - 130, bTop - 25, 260, 28);
             ctx.strokeStyle = '#ffffff';
@@ -1278,44 +1372,9 @@ function drawStationBuilding(railY) {
     });
 }
 
-// DROUHOVÁ KOLEJ S VÝHYBKAMI
+// VYKRESLENÍ KOLEJÍ (DRUHÁ KOLEJ VPŘEDU / POD NÁSTUPIŠTĚM S PLYNULÝMI VÝHYBKAMI)
 function drawDetailedTracks(railY) {
-    let isBigStationNearby = route.some(st => {
-        let dist = Math.abs(st.position - totalDistance) * 35;
-        return dist < 1600 && (st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň"));
-    });
-
-    if (isBigStationNearby) {
-        const backRailY = railY - 22;
-        ctx.fillStyle = '#3a3533';
-        ctx.fillRect(0, backRailY - 4, canvas.width, 12);
-        
-        ctx.fillStyle = '#1e140a';
-        let backSleeperOffset = (totalDistance * 35) % 20;
-        for (let x = -backSleeperOffset - 20; x < canvas.width + 20; x += 20) {
-            ctx.fillRect(x, backRailY - 2, 8, 8);
-        }
-        
-        ctx.fillStyle = '#5d6d7e';
-        ctx.fillRect(0, backRailY - 2, canvas.width, 3);
-
-        // Výhybky na okrajích sekce dvoukolejné trati
-        ctx.strokeStyle = '#8a95a5';
-        ctx.lineWidth = 3;
-
-        // Výhybka vlevo
-        ctx.beginPath();
-        ctx.moveTo(80, railY - 2);
-        ctx.lineTo(180, backRailY - 2);
-        ctx.stroke();
-
-        // Výhybka vpravo
-        ctx.beginPath();
-        ctx.moveTo(canvas.width - 80, railY - 2);
-        ctx.lineTo(canvas.width - 180, backRailY - 2);
-        ctx.stroke();
-    }
-
+    // 1. Hlavní kolej (Zadní pro projíždějící vlaky)
     ctx.fillStyle = '#4a4441';
     ctx.fillRect(0, railY - 8, canvas.width, 22);
 
@@ -1327,6 +1386,51 @@ function drawDetailedTracks(railY) {
 
     ctx.fillStyle = '#8a95a5';
     ctx.fillRect(0, railY - 4, canvas.width, 4);
+
+    // 2. Druhá kolej ve velkých stanicích (Umístěna BLÍŽE K POHLEDU - níže, přímo pod nástupištěm)
+    route.forEach(st => {
+        let isBigStation = st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň") || st.name.includes("Ostrava");
+        if (isBigStation) {
+            let stationScreenX = canvas.width * 0.5 + (st.position - totalDistance) * 35;
+            const trackLength = 1400;
+            const startX = stationScreenX - trackLength / 2;
+            const endX = stationScreenX + trackLength / 2;
+
+            if (endX > -300 && startX < canvas.width + 300) {
+                const frontRailY = railY + 22;
+
+                // Podloží druhé koleje
+                ctx.fillStyle = '#3a3533';
+                ctx.fillRect(startX, frontRailY - 4, trackLength, 12);
+
+                // Pražce
+                ctx.fillStyle = '#1e140a';
+                for (let x = startX; x < endX; x += 20) {
+                    ctx.fillRect(x, frontRailY - 2, 8, 8);
+                }
+
+                // Kolejnice
+                ctx.fillStyle = '#8a95a5';
+                ctx.fillRect(startX, frontRailY - 2, trackLength, 3);
+
+                // Plynulé výhybky (S-křivky pomocí Bezieru)
+                ctx.strokeStyle = '#8a95a5';
+                ctx.lineWidth = 3;
+
+                // Výhybka vlevo (Plynulé odbočení z hlavní na vedlejší kolej)
+                ctx.beginPath();
+                ctx.moveTo(startX - 120, railY - 2);
+                ctx.bezierCurveTo(startX - 60, railY - 2, startX - 40, frontRailY - 2, startX, frontRailY - 2);
+                ctx.stroke();
+
+                // Výhybka vpravo (Plynulé splynutí zpět)
+                ctx.beginPath();
+                ctx.moveTo(endX, frontRailY - 2);
+                ctx.bezierCurveTo(endX + 40, frontRailY - 2, endX + 60, railY - 2, endX + 120, railY - 2);
+                ctx.stroke();
+            }
+        }
+    });
 }
 
 function drawTrain(railY) {

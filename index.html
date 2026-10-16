@@ -36,14 +36,15 @@
             background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), url('pozadi.jpg') center/cover no-repeat #1a1a1a;
             text-align: center; z-index: 200;
         }
-        .menu-card { background: rgba(18, 18, 18, 0.88); backdrop-filter: blur(12px); padding: 45px 65px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 15px 35px rgba(0,0,0,0.9); }
+        .menu-card { background: rgba(18, 18, 18, 0.88); backdrop-filter: blur(12px); padding: 40px 60px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 15px 35px rgba(0,0,0,0.9); }
         .menu-title { font-size: 40px; margin-bottom: 12px; color: #4db8ff; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .menu-sub { color: #ccc; margin-bottom: 35px; font-size: 15px; }
-        .menu-buttons { display: flex; flex-direction: column; gap: 16px; width: 300px; margin: 0 auto; }
-        .menu-btn { padding: 15px; font-size: 16px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .menu-sub { color: #ccc; margin-bottom: 30px; font-size: 15px; }
+        .menu-buttons { display: flex; flex-direction: column; gap: 14px; width: 300px; margin: 0 auto; }
+        .menu-btn { padding: 14px; font-size: 15px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
         .btn-play { background: #27ae60; } .btn-play:hover { background: #2ecc71; transform: translateY(-2px); }
         .btn-depot { background: #2980b9; } .btn-depot:hover { background: #3498db; transform: translateY(-2px); }
         .btn-shop { background: #8e44ad; } .btn-shop:hover { background: #9b59b6; transform: translateY(-2px); }
+        .btn-settings { background: #7f8c8d; } .btn-settings:hover { background: #95a5a6; transform: translateY(-2px); }
 
         /* MAPA */
         #mapScreen { display: flex; flex-direction: column; background-color: #1a1a1a; }
@@ -90,8 +91,9 @@
         .key-badge { background: #333; padding: 1px 5px; border-radius: 3px; color: #fff; font-weight: bold; border: 1px solid #555; }
         .station-banner { background: #003366; color: #fff; padding: 3px 10px; border-radius: 4px; font-weight: bold; border: 1px solid #0055a5; font-size: 13px; }
 
-        .settings-btn { position: absolute; right: 10px; top: 10px; background: #333; color: #fff; border: 1px solid #555; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }
-        .settings-btn:hover { background: #555; }
+        /* OPRAVA: Tlačítko nastavení má vysoké z-index a povolené pointer-events */
+        .settings-btn { position: absolute; right: 12px; top: 12px; background: #333; color: #fff; border: 1px solid #666; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 1000; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+        .settings-btn:hover { background: #555; border-color: #4db8ff; }
 
         /* ADVANCED HUD ELEMENTS */
         .lever-container { display: flex; flex-direction: column; align-items: center; width: 60px; }
@@ -100,8 +102,8 @@
         .gauge-canvas { width: 70px; height: 70px; }
 
         /* MODÁLNÍ OKNA */
-        .modal-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 300; }
-        .modal-content { background: #222; border: 1px solid #444; border-radius: 12px; padding: 25px; width: 400px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: #222; border: 1px solid #555; border-radius: 12px; padding: 25px; width: 420px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.9); }
         .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
         
         /* VYHODNOCOVACÍ MODAL */
@@ -133,6 +135,7 @@
                 <button class="menu-btn btn-play" onclick="resetAndShowMap()">🗺️ Vybrat Trasu & Vyjet</button>
                 <button class="menu-btn btn-depot" onclick="showScreen('garageScreen')">🚃 Depo (Sestavit Soupravu)</button>
                 <button class="menu-btn btn-shop" onclick="showScreen('shopScreen')">🛒 Obchod s Vozidly</button>
+                <button class="menu-btn btn-settings" onclick="openSettingsModal()">⚙️ Nastavení Hry</button>
             </div>
         </div>
     </div>
@@ -320,7 +323,7 @@
                 <span>Zobrazit nápovědu ovládání:</span>
                 <input type="checkbox" id="showControlsCheck" checked onchange="toggleControlsHelp(this.checked)">
             </div>
-            <button onclick="closeSettingsModal()" style="background:#27ae60; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:10px;">Zavřít</button>
+            <button onclick="closeSettingsModal()" style="background:#27ae60; color:#fff; border:none; padding:10px; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:10px;">Zavřít</button>
         </div>
     </div>
 
@@ -1039,7 +1042,6 @@ function update() {
 
         if (accel > 0) {
             speedKmh += accel * dt;
-            // DŮSLEDNÉ OMEZENÍ RYCHLOSTI PODLE MAXSPEED
             if (speedKmh > maxSpeedKmh) speedKmh = maxSpeedKmh;
         }
 
@@ -1051,7 +1053,6 @@ function update() {
         let speedMs = (speedKmh / 3.6);
         totalDistance += speedMs * dt * direction;
 
-        // Statistiky průměrné rychlosti
         if (speedKmh > 0) {
             tripSpeedSum += speedKmh;
             tripSpeedTicks++;
@@ -1086,7 +1087,6 @@ function updateUI() {
         doorsEl.className = 'ui-value doors-closed';
     }
 
-    // POKROČILÝ HUD AKTUALIZACE
     if (hudMode === 'advanced') {
         drawSpeedoGauge(speedKmh, maxSpeedKmh);
         
@@ -1127,7 +1127,6 @@ function updateUI() {
     }
 }
 
-// VYKRESLOVÁNÍ TACHOMETRU V POKROČILÉM HUD
 function drawSpeedoGauge(speed, maxSpd) {
     const gCanvas = document.getElementById('speedoGauge');
     if (!gCanvas) return;
@@ -1137,7 +1136,6 @@ function drawSpeedoGauge(speed, maxSpd) {
 
     gCtx.clearRect(0, 0, 70, 70);
 
-    // Ciferník
     gCtx.fillStyle = '#111';
     gCtx.beginPath();
     gCtx.arc(35, 35, 30, 0, Math.PI * 2);
@@ -1146,7 +1144,6 @@ function drawSpeedoGauge(speed, maxSpd) {
     gCtx.lineWidth = 2;
     gCtx.stroke();
 
-    // Rychlostní ručička (z -135° do +135°)
     let ratio = Math.min(1, speed / maxSpd);
     let angle = -Math.PI * 0.75 + (ratio * Math.PI * 1.5);
 
@@ -1157,20 +1154,18 @@ function drawSpeedoGauge(speed, maxSpd) {
     gCtx.lineTo(35 + Math.cos(angle) * 22, 35 + Math.sin(angle) * 22);
     gCtx.stroke();
 
-    // Středový čep
     gCtx.fillStyle = '#fff';
     gCtx.beginPath();
     gCtx.arc(35, 35, 3, 0, Math.PI * 2);
     gCtx.fill();
 
-    // Text rychlosti
     gCtx.fillStyle = '#4db8ff';
     gCtx.font = 'bold 9px Arial';
     gCtx.textAlign = 'center';
     gCtx.fillText(Math.round(speed), 35, 54);
 }
 
-// NASTAVENÍ MODAL A PREFERENCÍ
+// NASTAVENÍ MODAL
 function openSettingsModal() {
     document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -1203,13 +1198,14 @@ function draw() {
     const railY = canvas.height * 0.65;
 
     drawSkyAndClouds(railY);
-    drawFarHills(railY);
+    drawFarHills(railY); // Kopce + vegetace na obzoru
     drawGrassField(railY);
-    drawProceduralTrees(railY);
+    drawProceduralTrees(railY); // Stromy v popředí
     drawStationBuilding(railY);
-    drawDetailedTracks(railY); // Zde se vykreslí hlavní kolej a druhá kolej pod stanicí
+    drawMainTrack(railY); // Pouze hlavní kolej
+    drawPlatformAndPeople(railY); // Nástupiště
+    drawSecondTrackAtStations(railY); // Vedlejší kolej AŽ NAD NÁSTUPIŠTĚM (plně viditelná!)
     drawTrain(railY);
-    drawPlatformAndPeople(railY);
 }
 
 function drawSkyAndClouds(railY) {
@@ -1232,7 +1228,9 @@ function drawSkyAndClouds(railY) {
     });
 }
 
+// KOPCE S BOHATOU VEGETACÍ V POZADÍ
 function drawFarHills(railY) {
+    // Vzdálené modravé kopce
     ctx.fillStyle = '#5c768d';
     ctx.beginPath();
     ctx.moveTo(0, railY);
@@ -1242,8 +1240,9 @@ function drawFarHills(railY) {
     }
     ctx.fill();
 
+    // Bližší zelené kopce s vegetací
     let frontGradient = ctx.createLinearGradient(0, railY - 180, 0, railY);
-    frontGradient.addColorStop(0, '#34495e');
+    frontGradient.addColorStop(0, '#2c3e50');
     frontGradient.addColorStop(1, '#1e2b37');
     ctx.fillStyle = frontGradient;
     
@@ -1254,6 +1253,19 @@ function drawFarHills(railY) {
         ctx.quadraticCurveTo(x + 200, railY - 160, x + 400, railY);
     }
     ctx.fill();
+
+    // Lesy a vegetace na horizontu kopců
+    ctx.fillStyle = '#143d22';
+    let hillVegOffset = (totalDistance * 0.08) % 800;
+    for (let x = -hillVegOffset - 800; x < canvas.width + 800; x += 40) {
+        let hillH = 90 + Math.sin(x * 0.01) * 40;
+        let yPos = railY - hillH;
+        ctx.beginPath();
+        ctx.arc(x, yPos, 18, 0, Math.PI * 2);
+        ctx.arc(x + 15, yPos - 5, 22, 0, Math.PI * 2);
+        ctx.arc(x + 30, yPos, 18, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
 function drawGrassField(railY) {
@@ -1294,7 +1306,6 @@ function drawProceduralTrees(railY) {
     }
 }
 
-// PROCEDURÁLNÍ RŮZNORODÉ STANIČNÍ BUDOVY
 function drawStationBuilding(railY) {
     route.forEach((station) => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
@@ -1372,9 +1383,8 @@ function drawStationBuilding(railY) {
     });
 }
 
-// VYKRESLENÍ KOLEJÍ (DRUHÁ KOLEJ VPŘEDU / POD NÁSTUPIŠTĚM S PLYNULÝMI VÝHYBKAMI)
-function drawDetailedTracks(railY) {
-    // 1. Hlavní kolej (Zadní pro projíždějící vlaky)
+// 1. HLAVNÍ KOLEJ
+function drawMainTrack(railY) {
     ctx.fillStyle = '#4a4441';
     ctx.fillRect(0, railY - 8, canvas.width, 22);
 
@@ -1386,8 +1396,55 @@ function drawDetailedTracks(railY) {
 
     ctx.fillStyle = '#8a95a5';
     ctx.fillRect(0, railY - 4, canvas.width, 4);
+}
 
-    // 2. Druhá kolej ve velkých stanicích (Umístěna BLÍŽE K POHLEDU - níže, přímo pod nástupištěm)
+// NÁSTUPIŠTĚ
+function drawPlatformAndPeople(railY) {
+    route.forEach(station => {
+        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
+
+        if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
+            const platformWidth = 1600;
+            const platformY = railY + 8;
+            
+            ctx.fillStyle = '#636e72';
+            ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 22);
+            
+            ctx.fillStyle = '#f39c12';
+            ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 3);
+
+            if (station.getOnCount > 0) {
+                const shirtColors = ['#e74c3c', '#2980b9', '#2ecc71', '#f1c40f', '#9b59b6'];
+                
+                for (let i = 0; i < Math.min(station.getOnCount, 22); i++) {
+                    let px = stationScreenX - 420 + (i * 40);
+                    let shirtColor = shirtColors[i % shirtColors.length];
+                    let feetY = platformY + 2;
+
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.fillRect(px - 3, feetY - 10, 2.5, 10);
+                    ctx.fillRect(px + 1, feetY - 10, 2.5, 10);
+
+                    ctx.fillStyle = shirtColor;
+                    ctx.fillRect(px - 4, feetY - 22, 9, 12);
+
+                    ctx.fillStyle = '#f39c12';
+                    ctx.beginPath();
+                    ctx.arc(px, feetY - 27, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.beginPath();
+                    ctx.arc(px, feetY - 29, 4.5, Math.PI, 0);
+                    ctx.fill();
+                }
+            }
+        }
+    });
+}
+
+// 2. DRUHÁ KOLEJ - VYKRESLUJE SE AŽ PO NÁSTUPIŠTI (PLNĚ VIDITELNÁ)
+function drawSecondTrackAtStations(railY) {
     route.forEach(st => {
         let isBigStation = st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň") || st.name.includes("Ostrava");
         if (isBigStation) {
@@ -1397,33 +1454,33 @@ function drawDetailedTracks(railY) {
             const endX = stationScreenX + trackLength / 2;
 
             if (endX > -300 && startX < canvas.width + 300) {
-                const frontRailY = railY + 22;
+                const frontRailY = railY + 28; // Umístěna v dolní části/před nástupištěm
 
-                // Podloží druhé koleje
+                // Podloží vedlejší koleje
                 ctx.fillStyle = '#3a3533';
-                ctx.fillRect(startX, frontRailY - 4, trackLength, 12);
+                ctx.fillRect(startX, frontRailY - 3, trackLength, 10);
 
                 // Pražce
                 ctx.fillStyle = '#1e140a';
-                for (let x = startX; x < endX; x += 20) {
+                for (let x = startX; x < endX; x += 18) {
                     ctx.fillRect(x, frontRailY - 2, 8, 8);
                 }
 
                 // Kolejnice
-                ctx.fillStyle = '#8a95a5';
+                ctx.fillStyle = '#b0b9c6';
                 ctx.fillRect(startX, frontRailY - 2, trackLength, 3);
 
-                // Plynulé výhybky (S-křivky pomocí Bezieru)
-                ctx.strokeStyle = '#8a95a5';
+                // Plynulé výhybky na obou koncích
+                ctx.strokeStyle = '#b0b9c6';
                 ctx.lineWidth = 3;
 
-                // Výhybka vlevo (Plynulé odbočení z hlavní na vedlejší kolej)
+                // Levá výhybka
                 ctx.beginPath();
                 ctx.moveTo(startX - 120, railY - 2);
                 ctx.bezierCurveTo(startX - 60, railY - 2, startX - 40, frontRailY - 2, startX, frontRailY - 2);
                 ctx.stroke();
 
-                // Výhybka vpravo (Plynulé splynutí zpět)
+                // Pravá výhybka
                 ctx.beginPath();
                 ctx.moveTo(endX, frontRailY - 2);
                 ctx.bezierCurveTo(endX + 40, frontRailY - 2, endX + 60, railY - 2, endX + 120, railY - 2);
@@ -1467,51 +1524,7 @@ function drawTrain(railY) {
     });
 }
 
-function drawPlatformAndPeople(railY) {
-    route.forEach(station => {
-        let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
-
-        if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
-            const platformWidth = 1600;
-            const platformY = railY + 8;
-            
-            ctx.fillStyle = '#7f8c8d';
-            ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 25);
-            
-            ctx.fillStyle = '#f39c12';
-            ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 3);
-
-            if (station.getOnCount > 0) {
-                const shirtColors = ['#e74c3c', '#2980b9', '#2ecc71', '#f1c40f', '#9b59b6'];
-                
-                for (let i = 0; i < Math.min(station.getOnCount, 22); i++) {
-                    let px = stationScreenX - 420 + (i * 40);
-                    let shirtColor = shirtColors[i % shirtColors.length];
-                    let feetY = platformY + 2;
-
-                    ctx.fillStyle = '#2c3e50';
-                    ctx.fillRect(px - 3, feetY - 10, 2.5, 10);
-                    ctx.fillRect(px + 1, feetY - 10, 2.5, 10);
-
-                    ctx.fillStyle = shirtColor;
-                    ctx.fillRect(px - 4, feetY - 22, 9, 12);
-
-                    ctx.fillStyle = '#f39c12';
-                    ctx.beginPath();
-                    ctx.arc(px, feetY - 27, 4.5, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.fillStyle = '#2c3e50';
-                    ctx.beginPath();
-                    ctx.arc(px, feetY - 29, 4.5, Math.PI, 0);
-                    ctx.fill();
-                }
-            }
-        }
-    });
-}
-
-// Spuštění cyklu
+// Spuštění hlavního cyklu
 update();
 </script>
 

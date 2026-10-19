@@ -7,7 +7,7 @@ const trainCarsData = [
 
 // 2. VOZIDLA K ZAKOUPENÍ V OBCHODU
 const availableShopVehicles = [
-    { type: 'loco', category: 'loco', targetHeight: 55, label: 'Motorový vůz 810', file: 'https://www.vagonweb.cz/popisy/img/CD/810-b.gif', maxSpeed: 80 },
+    { type: 'loco', category: 'loco', targetHeight: 55, label: 'Motorový vůz 810', file: 'https://www.vagonweb.cz/popisy/img/CD/810-b.gif', maxSpeed: 80,  price: 0 },
     { label: 'Motorová jednotka 814 (Regionova)', file: 'https://www.vagonweb.cz/popisy/img/CD/814-2-b.gif', price: 150, maxSpeed: 80, type: 'loco', category: 'loco' },
     { label: 'Vagón Bdmtee 2. třída', file: 'https://www.vagonweb.cz/popisy/img/CD/Bdmtee-n2-a.gif', price: 30, type: 'wagon', category: 'wagon' },
     { label: 'Lokomotiva Vectron', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/384-a.gif', price: 2000, maxSpeed: 160, type: 'loco', category: 'loco' },

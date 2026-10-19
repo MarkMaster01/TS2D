@@ -15,7 +15,7 @@ const availableShopVehicles = [
     { label: 'Lokomotiva ČD 362', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/162-n-b.gif', price: 600, maxSpeed: 140, type: 'loco', category: 'loco' },
     { label: 'Lokomotiva ČD 754', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/754-n2-a.gif', price: 400, maxSpeed: 140, type: 'loco', category: 'loco' },
     { label: 'Lokomotiva ČD 749', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/751-z-a.gif', price: 600, maxSpeed: 140, type: 'loco', category: 'loco' },
-    { label: 'Lokomotiva ČD 380', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/380-b.gif', price: 1700, maxSpeed: 140, type: 'loco', category: 'loco' },
+    { label: 'Lokomotiva ČD 380', targetHeight: 55, file: 'https://www.vagonweb.cz/popisy/img/CD/380-b.gif', price: 1700, maxSpeed: 200, type: 'loco', category: 'loco' },
     { label: 'Elektrická jednotka 640.1 (RegioPanter)', file: 'https://www.vagonweb.cz/popisy/img/CD/440-0-n-a.gif', price: 600, maxSpeed: 140, type: 'loco', category: 'loco' },
     { label: 'Elektrická jednotka JMK 530 (Ibalgin)', file: 'https://www.vagonweb.cz/popisy/img/CZ-/JMK/530-a.gif', price: 800, maxSpeed: 140, type: 'loco', category: 'loco' },
     { label: 'Vůz  Bfhpvee (Sysel) - konec vlaku', file: 'https://www.vagonweb.cz/popisy/img/CD/Bfhpvee295-n2-a.gif', price: 80, type: 'wagon', category: 'wagon' },

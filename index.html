@@ -34,7 +34,7 @@
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             background: linear-gradient(rgba(10,15,25,0.7), rgba(5,10,15,0.9)), url('pozadi.jpg') center/cover no-repeat #12161f;
-            text-align: center; z-index: 200;
+            text-align: center; z-index: 200; position: relative;
         }
         .menu-card { background: rgba(18, 22, 32, 0.9); backdrop-filter: blur(16px); padding: 45px 65px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
         .menu-title { font-size: 42px; margin-bottom: 10px; color: #4db8ff; text-shadow: 0 0 20px rgba(77, 184, 255, 0.4); }
@@ -45,6 +45,12 @@
         .btn-depot { background: linear-gradient(135deg, #0284c7, #0369a1); } .btn-depot:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4); }
         .btn-shop { background: linear-gradient(135deg, #8b5cf6, #7c3aed); } .btn-shop:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4); }
         .btn-settings { background: #334155; } .btn-settings:hover { background: #475569; transform: translateY(-2px); }
+
+        .build-version-tag {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            color: #64748b; font-size: 12px; font-family: monospace; letter-spacing: 0.5px;
+            background: rgba(15, 23, 42, 0.6); padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+        }
 
         /* MAPA */
         #mapScreen { display: flex; flex-direction: column; background-color: #1a1a1a; }
@@ -137,6 +143,7 @@
                 <button class="menu-btn btn-settings" onclick="openSettingsModal()">⚙️ Nastavení Hry</button>
             </div>
         </div>
+        <div class="build-version-tag">Build: 19. 10. 2026, 19:55</div>
     </div>
 
     <!-- 1. MAPA -->
@@ -851,7 +858,6 @@ function startSimulation() {
 
     route.push({ name: selectedEndStation.name, position: Math.round(scaledTotalDist), getOffCount: 30, getOnCount: 0, completed: false });
 
-    // Generování železničních přejezdů mezi stanicemi
     crossings = [];
     for (let i = 0; i < route.length - 1; i++) {
         let p1 = route[i].position;
@@ -913,6 +919,7 @@ const dt = 1 / 60;
 
 let windCloudOffset = 0;
 let crossingLightTick = 0;
+let passengerAnimTick = 0;
 
 // Částice pro déšť
 const rainDrops = [];
@@ -944,6 +951,7 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
+// OPRAVA VÝŠKY: Přesné škálování elektrických i dieselových mašin k vozům
 function loadTrainImages() {
     let loco = activeTrainCars.find(c => c.type === 'loco' || c.category === 'loco' || (c.label && (c.label.toLowerCase().includes('lokomotiva') || c.label.toLowerCase().includes('jednotka') || c.label.toLowerCase().includes('810') || c.label.toLowerCase().includes('motorov'))));
     maxSpeedKmh = loco ? (loco.maxSpeed || loco.maxspeed || 120) : 120;
@@ -956,11 +964,25 @@ function loadTrainImages() {
                 const aspectRatio = car.img.width / car.img.height;
                 let labelLower = car.label ? car.label.toLowerCase() : '';
                 let fileLower = car.file ? car.file.toLowerCase() : '';
+                
+                // Detekce elektrických mašin se sběrači (např. 163, 362, 371, 380, Vectron, Panter, CityElefant)
                 let isElectric = labelLower.includes('362') || labelLower.includes('163') || labelLower.includes('371') || 
                                  labelLower.includes('elektr') || labelLower.includes('380') || labelLower.includes('vectron') ||
+                                 labelLower.includes('panter') || labelLower.includes('elefant') ||
                                  fileLower.includes('362') || fileLower.includes('163') || fileLower.includes('371');
 
-                car.targetHeight = isElectric ? 70 : 55;
+                // Patrové vozy (Bdmteeo, CityElefant) jsou přirozeně vyšší
+                let isDoubleDecker = labelLower.includes('patr') || labelLower.includes('elefant') || fileLower.includes('patr');
+
+                if (isDoubleDecker) {
+                    car.targetHeight = 62;
+                } else if (isElectric) {
+                    // Elektrická mašina se sběračem dostane kalibrovanou výšku 68px, aby její skříň přesně seděla k vozům
+                    car.targetHeight = 68;
+                } else {
+                    car.targetHeight = 55;
+                }
+
                 car.width = car.targetHeight * aspectRatio;
                 car.height = car.targetHeight;
                 car.imgLoaded = true;
@@ -1091,6 +1113,7 @@ function update() {
 
         windCloudOffset += 0.3;
         crossingLightTick++;
+        passengerAnimTick++;
 
         updateUI();
         draw();
@@ -1275,36 +1298,43 @@ function draw() {
     // 1. Obloha & Mraky
     drawSkyAndClouds(railY);
 
-    // 2. Nově přepracované hory a zalesněné hřebeny (dokonale kopírující terén)
+    // 2. Čisté, vrstvené kopce (žádné ošklivé plovoucí kuličky vegetace)
     drawDistantMountains(railY);
-    drawForeHillsAndForest(railY);
+    drawMidHills(railY);
 
-    // 3. Travnatý terén a silnice / přejezdy
+    // 3. Travnatý terén
     drawTerrainAndGrass(railY);
-    drawCrossings(railY);
 
-    // 4. Stromy v popředí & Návěstidla podél trati
+    // 4. Stromy v pozadí podél trati
     drawForeTrees(railY);
-    drawSignalsAndSigns(railY);
 
-    // 5. Nádraží a kolejiště (žádné křížení výhybky s nástupištěm)
+    // 5. Nádražní budova (původní detailní provedení)
     drawStationBuilding(railY);
-    drawSecondTrackRealistic(railY);
-    drawMainTrack(railY);
-    drawPlatformAndPeople(railY);
 
-    // 6. Trolejové vedení (sloupy a dráty nad tratí)
+    // 6. Trolejové vedení za vlakem
     drawOverheadCatenary(railY);
 
-    // 7. Vlak
+    // 7. Hlavní kolej
+    drawMainTrack(railY);
+
+    // 8. Vlak (vykresluje se na koleji)
     drawTrain(railY);
 
-    // 8. Osvětlení vlaku v noci (reflektor)
+    // 9. Noční světlo vlaku (přirozený reflektor)
     if (timeOfDay === 'night') {
-        drawTrainHeadlight(railY);
+        drawTrainHeadlightRealistic(railY);
     }
 
-    // 9. Efekt počasí (déšť)
+    // 10. Nástupiště a cestující V POPŘEDÍ (hlavy ani těla už vlak nepřekryje!)
+    drawPlatformAndPeople(railY);
+
+    // 11. Přejezdy (zkrácená silnice, aby nezasahovala do ničeho)
+    drawCrossings(railY);
+
+    // 12. Druhá kolej V POPŘEDÍ (výhybky jsou natažené mimo nástupiště)
+    drawSecondTrackInFront(railY);
+
+    // 13. Počasí (déšť)
     if (currentWeather === 'rain') {
         drawRain();
     }
@@ -1331,7 +1361,6 @@ function drawSkyAndClouds(railY) {
     ctx.fillStyle = skyGradient;
     ctx.fillRect(0, 0, canvas.width, railY);
 
-    // V noci kreslíme měsíc a hvězdy
     if (timeOfDay === 'night') {
         ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
@@ -1343,7 +1372,6 @@ function drawSkyAndClouds(railY) {
         ctx.fill();
     }
 
-    // Mraky
     clouds.forEach(cloud => {
         let renderX = (cloud.x + windCloudOffset - totalDistance * 0.02) % (canvas.width + 400);
         if (renderX < -200) renderX += canvas.width + 400;
@@ -1359,132 +1387,108 @@ function drawSkyAndClouds(railY) {
     });
 }
 
-// DOKONALÉ KOPCE: Křivky s matematicky přesným lesem kopírujícím jejich hřeben
+// ČISTÉ KOPCE: Dvě hladké přirozené vrstvy bez nesmyslných plovoucích kuliček
 function drawDistantMountains(railY) {
-    let mountColor = (timeOfDay === 'night') ? '#0c1322' : (timeOfDay === 'sunset' ? '#4a1d48' : '#64748b');
+    let mountColor = (timeOfDay === 'night') ? '#0c1322' : (timeOfDay === 'sunset' ? '#4a1d48' : '#5c768d');
     ctx.fillStyle = mountColor;
     ctx.beginPath();
     ctx.moveTo(0, railY);
 
-    const step = 500;
+    const step = 600;
     let offset = (totalDistance * 0.03) % step;
-    
     for (let x = -offset - step; x < canvas.width + step * 2; x += step) {
         ctx.quadraticCurveTo(x + step * 0.5, railY - 260, x + step, railY);
     }
     ctx.fill();
 }
 
-function drawForeHillsAndForest(railY) {
-    let hillColor = (timeOfDay === 'night') ? '#061715' : (timeOfDay === 'sunset' ? '#1c2e27' : '#276749');
-    let forestColor = (timeOfDay === 'night') ? '#030f0d' : (timeOfDay === 'sunset' ? '#13211c' : '#1c4532');
-
-    const step = 320;
-    let offset = (totalDistance * 0.08) % step;
-
-    // Vykreslení stromečků přesně na hřebenu kopce
-    for (let x = -offset - step; x < canvas.width + step * 2; x += 18) {
-        let relX = ((x + offset + step) % step) / step; 
-        // Parabolický výpočet výšky hřebene kopce v daném bodě x
-        let hillHeight = Math.sin(relX * Math.PI) * 140;
-        let y = railY - hillHeight;
-
-        ctx.fillStyle = forestColor;
-        ctx.beginPath();
-        ctx.arc(x, y + 2, 12, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Těleso kopců
+function drawMidHills(railY) {
+    let hillColor = (timeOfDay === 'night') ? '#061715' : (timeOfDay === 'sunset' ? '#261c2e' : '#1e3d2f');
     ctx.fillStyle = hillColor;
     ctx.beginPath();
     ctx.moveTo(0, railY);
+
+    const step = 420;
+    let offset = (totalDistance * 0.07) % step;
     for (let x = -offset - step; x < canvas.width + step * 2; x += step) {
-        ctx.quadraticCurveTo(x + step * 0.5, railY - 140, x + step, railY);
+        ctx.quadraticCurveTo(x + step * 0.5, railY - 150, x + step, railY);
     }
     ctx.fill();
 }
 
 function drawTerrainAndGrass(railY) {
-    let grassColor = (timeOfDay === 'night') ? '#0a2318' : (timeOfDay === 'sunset' ? '#1e422b' : '#2f855a');
+    let grassColor = (timeOfDay === 'night') ? '#0a2318' : (timeOfDay === 'sunset' ? '#1e422b' : '#27ae60');
     ctx.fillStyle = grassColor;
     ctx.fillRect(0, railY - 4, canvas.width, canvas.height - railY + 4);
 
-    // Jemná textura náspu u trati
-    ctx.fillStyle = (timeOfDay === 'night') ? '#111827' : '#3e3835';
-    ctx.fillRect(0, railY - 6, canvas.width, 24);
+    // Štěrkové podloží trati
+    ctx.fillStyle = (timeOfDay === 'night') ? '#171717' : '#453f3d';
+    ctx.fillRect(0, railY - 8, canvas.width, 24);
 }
 
-// ŽELEZNIČNÍ PŘEJEZDY S AUTY A ZÁVORAMI
+// ZKRÁCENÝ, ČISTÝ SILNIČNÍ PŘEJEZD
 function drawCrossings(railY) {
     crossings.forEach(cr => {
         let screenX = canvas.width * 0.5 + (cr.position - totalDistance) * 35;
-        if (screenX > -200 && screenX < canvas.width + 200) {
-            const roadWidth = 90;
+        if (screenX > -150 && screenX < canvas.width + 150) {
+            const roadWidth = 80;
+            const roadTop = railY - 40;
+            const roadHeight = 75; // Zkráceno – nezasahuje zbytečně hluboko dolů
 
-            // Asfaltová silnice přes kolej
+            // Asfalt
             ctx.fillStyle = '#1e293b';
-            ctx.fillRect(screenX - roadWidth / 2, railY - 50, roadWidth, canvas.height - railY + 50);
+            ctx.fillRect(screenX - roadWidth / 2, roadTop, roadWidth, roadHeight);
 
-            // Bílé pruhy na silnici
+            // Středová čára
             ctx.fillStyle = '#f8fafc';
-            ctx.fillRect(screenX - 2, railY + 25, 4, 30);
-            ctx.fillRect(screenX - 2, railY + 70, 4, 30);
+            ctx.fillRect(screenX - 2, roadTop + 5, 4, 20);
+            ctx.fillRect(screenX - 2, roadTop + 35, 4, 20);
 
-            // Výstražník AŽD (semafor přejezdu)
-            let postX = screenX + roadWidth / 2 + 15;
+            // Výstražník AŽD
+            let postX = screenX + roadWidth / 2 + 12;
             ctx.fillStyle = '#64748b';
-            ctx.fillRect(postX - 2, railY - 60, 4, 60);
+            ctx.fillRect(postX - 2, railY - 55, 4, 55);
 
-            // Deska výstražníku
             ctx.fillStyle = '#0f172a';
-            ctx.fillRect(postX - 12, railY - 70, 24, 18);
+            ctx.fillRect(postX - 11, railY - 65, 22, 16);
             ctx.strokeStyle = '#f8fafc';
             ctx.lineWidth = 1;
-            ctx.strokeRect(postX - 12, railY - 70, 24, 18);
+            ctx.strokeRect(postX - 11, railY - 65, 22, 16);
 
-            // Blikající světla (střídavě červená, když je vlak blízko do 350 m)
             let isTrainNear = Math.abs(totalDistance - cr.position) < 350;
             let leftRed = isTrainNear && (Math.floor(crossingLightTick / 25) % 2 === 0);
             let rightRed = isTrainNear && (Math.floor(crossingLightTick / 25) % 2 === 1);
             let whiteLight = !isTrainNear && (Math.floor(crossingLightTick / 35) % 2 === 0);
 
-            // Červená levá
             ctx.fillStyle = leftRed ? '#ef4444' : '#450a0a';
-            ctx.beginPath(); ctx.arc(postX - 6, railY - 62, 3.5, 0, Math.PI * 2); ctx.fill();
-            // Červená pravá
+            ctx.beginPath(); ctx.arc(postX - 5, railY - 58, 3, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = rightRed ? '#ef4444' : '#450a0a';
-            ctx.beginPath(); ctx.arc(postX + 6, railY - 62, 3.5, 0, Math.PI * 2); ctx.fill();
-            // Bílé pozitivní světlo nahoře
+            ctx.beginPath(); ctx.arc(postX + 5, railY - 58, 3, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = whiteLight ? '#f8fafc' : '#334155';
-            ctx.beginPath(); ctx.arc(postX, railY - 67, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(postX, railY - 62, 2.5, 0, Math.PI * 2); ctx.fill();
 
-            // Závora (spuštěná nebo zvednutá)
+            // Závora
             ctx.save();
-            ctx.translate(postX - 4, railY - 14);
-            let barrierAngle = isTrainNear ? 0 : -Math.PI * 0.42; // Vodorovně nebo zvednutá
+            ctx.translate(postX - 3, railY - 12);
+            let barrierAngle = isTrainNear ? 0 : -Math.PI * 0.42;
             ctx.rotate(barrierAngle);
-            
-            // Břevno závory s červeno-bílými pruhy
-            for (let b = 0; b < 65; b += 12) {
+            for (let b = 0; b < 60; b += 12) {
                 ctx.fillStyle = (b % 24 === 0) ? '#ef4444' : '#ffffff';
                 ctx.fillRect(-b - 12, -2, 12, 4);
             }
             ctx.restore();
 
-            // Auto čekající před přejezdem
+            // Auto
             if (cr.hasCar) {
-                let carX = screenX - 18;
-                let carY = railY + 35;
+                let carX = screenX - 16;
+                let carY = railY + 12;
                 ctx.fillStyle = cr.carColor;
-                ctx.fillRect(carX, carY, 36, 18);
-                // Okna auta
+                ctx.fillRect(carX, carY, 32, 15);
                 ctx.fillStyle = '#0f172a';
-                ctx.fillRect(carX + 6, carY + 3, 24, 7);
-                // Světla auta
+                ctx.fillRect(carX + 5, carY + 2, 22, 6);
                 ctx.fillStyle = '#fef08a';
-                ctx.fillRect(carX + 2, carY + 12, 4, 3);
-                ctx.fillRect(carX + 30, carY + 12, 4, 3);
+                ctx.fillRect(carX + 2, carY + 10, 3, 2.5);
+                ctx.fillRect(carX + 27, carY + 10, 3, 2.5);
             }
         }
     });
@@ -1523,101 +1527,76 @@ function drawForeTrees(railY) {
     }
 }
 
-// ŽELEZNIČNÍ NÁVĚSTIDLA (SEMAFORY) PODÉL TRATI
-function drawSignalsAndSigns(railY) {
-    route.forEach(st => {
-        let sigPos = st.position - 450; // Návěstidlo 450 m před stanicí
-        let screenX = canvas.width * 0.5 + (sigPos - totalDistance) * 35;
-
-        if (screenX > -100 && screenX < canvas.width + 100) {
-            // Stožár návěstidla
-            ctx.fillStyle = '#64748b';
-            ctx.fillRect(screenX - 2, railY - 95, 4, 90);
-
-            // Štít návěstidla
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(screenX - 9, railY - 95, 18, 44);
-            ctx.strokeStyle = '#f8fafc';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(screenX - 9, railY - 95, 18, 44);
-
-            // Návěstní světla: Zelená (volno), Žlutá (výstraha), Červená (stůj)
-            let dist = st.position - totalDistance;
-            let isRed = dist < 200 && dist > -50 && !st.completed;
-            let isYellow = dist >= 200 && dist < 700;
-            let isGreen = !isRed && !isYellow;
-
-            // Zelená
-            ctx.fillStyle = isGreen ? '#22c55e' : '#052e16';
-            ctx.beginPath(); ctx.arc(screenX, railY - 86, 3.5, 0, Math.PI * 2); ctx.fill();
-            // Červená
-            ctx.fillStyle = isRed ? '#ef4444' : '#450a0a';
-            ctx.beginPath(); ctx.arc(screenX, railY - 73, 3.5, 0, Math.PI * 2); ctx.fill();
-            // Žlutá
-            ctx.fillStyle = isYellow ? '#eab308' : '#422006';
-            ctx.beginPath(); ctx.arc(screenX, railY - 60, 3.5, 0, Math.PI * 2); ctx.fill();
-        }
-    });
-}
-
+// PŮVODNÍ DETAILNÍ NÁDRAŽNÍ BUDOVA
 function drawStationBuilding(railY) {
     route.forEach((station) => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
 
         if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
             let seed = 0;
-            for (let charIdx = 0; charIdx < station.name.length; charIdx++) seed += station.name.charCodeAt(charIdx);
+            for (let charIdx = 0; charIdx < station.name.length; charIdx++) {
+                seed += station.name.charCodeAt(charIdx);
+            }
             let randStyle = pseudoRandom(seed);
             let randColor = pseudoRandom(seed * 3.7);
 
             const bWidth = 480 + Math.floor(randStyle * 140);
-            const bHeight = 125 + Math.floor(randStyle * 35);
+            const bHeight = 120 + Math.floor(randStyle * 35);
             const bLeft = stationScreenX - bWidth / 2;
-            const bTop = railY - bHeight - 10;
+            const bTop = railY - bHeight;
 
-            let wallColors = (timeOfDay === 'night') 
-                ? ['#1f242d', '#282b35', '#242a36'] 
-                : ['#c0392b', '#d35400', '#7f8c8d', '#bdc3c7', '#34495e', '#16a085'];
+            let wallColors = ['#c0392b', '#d35400', '#f39c12', '#7f8c8d', '#bdc3c7', '#34495e', '#16a085'];
             let wallColor = wallColors[Math.floor(randColor * wallColors.length)];
 
             ctx.fillStyle = wallColor;
             ctx.fillRect(bLeft, bTop, bWidth, bHeight);
 
-            // Sokl
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(bLeft, railY - 20, bWidth, 10);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(bLeft, railY - 15, bWidth, 15);
 
-            // Střecha
-            ctx.fillStyle = (timeOfDay === 'night') ? '#0f172a' : '#1e293b';
-            ctx.beginPath();
-            ctx.moveTo(bLeft - 20, bTop);
-            ctx.lineTo(stationScreenX, bTop - 40);
-            ctx.lineTo(bLeft + bWidth + 20, bTop);
-            ctx.fill();
+            // Střecha s původním detailem
+            ctx.fillStyle = randStyle > 0.5 ? '#222' : '#7f8c8d';
+            if (randStyle > 0.4) {
+                ctx.beginPath();
+                ctx.moveTo(bLeft - 20, bTop);
+                ctx.lineTo(stationScreenX, bTop - 40);
+                ctx.lineTo(bLeft + bWidth + 20, bTop);
+                ctx.fill();
+            } else {
+                ctx.fillRect(bLeft - 15, bTop - 10, bWidth + 30, 14);
+            }
 
-            // Okna (v noci svítí žlutě!)
+            // Okna s původním žlutým rozsvícením a rámy
+            ctx.fillStyle = '#111';
             for (let wx = bLeft + 30; wx < bLeft + bWidth - 30; wx += 55) {
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(wx, bTop + 24, 28, 38);
-                ctx.fillStyle = (timeOfDay === 'night') ? '#fef08a' : '#94a3b8';
-                ctx.fillRect(wx + 3, bTop + 27, 22, 32);
+                ctx.fillRect(wx, bTop + 20, 28, 38);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(wx + 3, bTop + 23, 10, 32);
+                ctx.fillStyle = '#111';
             }
 
             // Dveře
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(stationScreenX - 22, railY - 55, 44, 45);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(stationScreenX - 22, railY - 50, 44, 50);
 
             // Hodiny
-            ctx.fillStyle = '#f8fafc';
+            ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(stationScreenX, bTop + 22, 13, 0, Math.PI * 2);
+            ctx.arc(stationScreenX, bTop + 20, 12, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#0f172a';
+            ctx.strokeStyle = '#222';
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Nádražní modrá cedule s názvem stanice
-            ctx.fillStyle = '#003366';
+            ctx.beginPath();
+            ctx.moveTo(stationScreenX, bTop + 20);
+            ctx.lineTo(stationScreenX, bTop + 13);
+            ctx.moveTo(stationScreenX, bTop + 20);
+            ctx.lineTo(stationScreenX + 5, bTop + 20);
+            ctx.stroke();
+
+            // Modrá cedule stanice
+            ctx.fillStyle = '#00284d';
             ctx.fillRect(stationScreenX - 130, bTop - 25, 260, 28);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
@@ -1631,102 +1610,75 @@ function drawStationBuilding(railY) {
     });
 }
 
-// REALISTICKÁ DRUHÁ KOLEJ (Leží ZA hlavní tratí na pozadí, výhybka končí mimo nástupiště)
-function drawSecondTrackRealistic(railY) {
-    route.forEach(st => {
-        let isBigStation = st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň") || st.name.includes("Ostrava");
-        if (isBigStation) {
-            let stationScreenX = canvas.width * 0.5 + (st.position - totalDistance) * 35;
-            const trackLength = 1600;
-            const startX = stationScreenX - trackLength / 2;
-            const endX = stationScreenX + trackLength / 2;
-
-            if (endX > -300 && startX < canvas.width + 300) {
-                // Druhá kolej je umístěna 22 px ZA hlavní kolejí (nahoře v perspektivě)
-                const backRailY = railY - 18;
-
-                ctx.fillStyle = '#262220';
-                ctx.fillRect(startX, backRailY - 4, trackLength, 8);
-
-                ctx.fillStyle = '#120d09';
-                for (let x = startX; x < endX; x += 16) {
-                    ctx.fillRect(x, backRailY - 3, 6, 6);
-                }
-
-                ctx.fillStyle = '#94a3b8';
-                ctx.fillRect(startX, backRailY - 2, trackLength, 2.5);
-
-                // Štíhlé výhybky odbočující z hlavní trati PŘED a ZA stanicí
-                ctx.strokeStyle = '#94a3b8';
-                ctx.lineWidth = 2.5;
-
-                ctx.beginPath();
-                ctx.moveTo(startX - 180, railY - 2);
-                ctx.bezierCurveTo(startX - 90, railY - 2, startX - 70, backRailY - 2, startX, backRailY - 2);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(endX, backRailY - 2);
-                ctx.bezierCurveTo(endX + 70, backRailY - 2, endX + 90, railY - 2, endX + 180, railY - 2);
-                ctx.stroke();
-            }
-        }
-    });
-}
-
 function drawMainTrack(railY) {
-    // Štěrkové lože trati
-    ctx.fillStyle = (timeOfDay === 'night') ? '#171717' : '#453f3d';
-    ctx.fillRect(0, railY - 7, canvas.width, 22);
+    ctx.fillStyle = '#4a4441';
+    ctx.fillRect(0, railY - 8, canvas.width, 22);
 
-    // Pražce
-    ctx.fillStyle = (timeOfDay === 'night') ? '#0a0a0a' : '#22150b';
+    ctx.fillStyle = '#2b1b0e';
     let sleeperOffset = (totalDistance * 35) % 24;
     for (let x = -sleeperOffset - 24; x < canvas.width + 24; x += 24) {
-        ctx.fillRect(x, railY - 4, 11, 15);
+        ctx.fillRect(x, railY - 4, 10, 15);
     }
 
-    // Ocelové kolejnice s odleskem
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = '#8a95a5';
     ctx.fillRect(0, railY - 4, canvas.width, 4);
-    ctx.fillStyle = '#cbd5e1';
+    ctx.fillStyle = '#c5d1e0';
     ctx.fillRect(0, railY - 4, canvas.width, 1.5);
 }
 
+// NÁSTUPIŠTĚ A CESTUJÍCÍ V POPŘEDÍ PŘED VLAKEM + ANIMACE NASTUPOVÁNÍ
 function drawPlatformAndPeople(railY) {
     route.forEach(station => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
 
         if (stationScreenX > -1200 && stationScreenX < canvas.width + 1200) {
-            const platformWidth = 1500;
+            const platformWidth = 1600;
             const platformY = railY + 8;
             
             // Betonové nástupiště
-            ctx.fillStyle = (timeOfDay === 'night') ? '#334155' : '#64748b';
+            ctx.fillStyle = '#636e72';
             ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 22);
             
-            // Žlutý bezpečnostní varovný pás
-            ctx.fillStyle = '#eab308';
+            // Žlutý bezpečnostní pás
+            ctx.fillStyle = '#f39c12';
             ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 3);
 
-            // Lidé čekající na nástup
+            // Cestující na nástupišti (kreslí se AŽ PO VLAKU, takže je vlak nepřekryje!)
             if (station.getOnCount > 0) {
-                const shirtColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+                const shirtColors = ['#e74c3c', '#2980b9', '#2ecc71', '#f1c40f', '#9b59b6'];
+                
                 for (let i = 0; i < Math.min(station.getOnCount, 22); i++) {
-                    let px = stationScreenX - 420 + (i * 42);
+                    let basePx = stationScreenX - 420 + (i * 40);
+                    
+                    // Jemná animace chůze/nastupování při otevřených dveřích
+                    let walkOffset = 0;
+                    if (isExchangingPassengers && doorsOpen) {
+                        walkOffset = Math.sin(passengerAnimTick * 0.2 + i) * 3;
+                    }
+
+                    let px = basePx + walkOffset;
                     let shirtColor = shirtColors[i % shirtColors.length];
                     let feetY = platformY + 2;
 
-                    ctx.fillStyle = '#1e293b';
+                    // Nohy
+                    ctx.fillStyle = '#2c3e50';
                     ctx.fillRect(px - 3, feetY - 10, 2.5, 10);
                     ctx.fillRect(px + 1, feetY - 10, 2.5, 10);
 
+                    // Tělo
                     ctx.fillStyle = shirtColor;
                     ctx.fillRect(px - 4, feetY - 22, 9, 12);
 
-                    ctx.fillStyle = '#f59e0b';
+                    // Hlava
+                    ctx.fillStyle = '#f39c12';
                     ctx.beginPath();
                     ctx.arc(px, feetY - 27, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Vlasy
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.beginPath();
+                    ctx.arc(px, feetY - 29, 4.5, Math.PI, 0);
                     ctx.fill();
                 }
             }
@@ -1734,12 +1686,58 @@ function drawPlatformAndPeople(railY) {
     });
 }
 
-// REALISTICKÉ TROLEJOVÉ VEDENÍ (SLOUPY A DRÁTY)
+// DRUHÁ KOLEJ BLÍŽ K POHLEDU (V POPŘEDÍ) S DLOUHÝMI VÝHYBKAMI MIMO NÁSTUPIŠTĚ
+function drawSecondTrackInFront(railY) {
+    route.forEach(st => {
+        let isBigStation = st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň") || st.name.includes("Ostrava") || st.name.includes("Pardubice");
+        if (isBigStation) {
+            let stationScreenX = canvas.width * 0.5 + (st.position - totalDistance) * 35;
+            
+            // Kolej je dostatečně dlouhá (2000px), takže výhybky začínají až DALEKO za nástupištěm
+            const trackLength = 2000;
+            const startX = stationScreenX - trackLength / 2;
+            const endX = stationScreenX + trackLength / 2;
+
+            if (endX > -300 && startX < canvas.width + 300) {
+                // Druhá kolej je v popředí (blíž k pohledu)
+                const frontRailY = railY + 36;
+
+                // Podloží
+                ctx.fillStyle = '#3a3533';
+                ctx.fillRect(startX, frontRailY - 3, trackLength, 12);
+
+                // Pražce
+                ctx.fillStyle = '#1e140a';
+                for (let x = startX; x < endX; x += 18) {
+                    ctx.fillRect(x, frontRailY - 2, 8, 10);
+                }
+
+                // Kolejnice
+                ctx.fillStyle = '#b0b9c6';
+                ctx.fillRect(startX, frontRailY - 2, trackLength, 3);
+
+                // Výhybky napojené až daleko před/za stanicí (mimo nástupiště)
+                ctx.strokeStyle = '#b0b9c6';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.moveTo(startX - 180, railY - 2);
+                ctx.bezierCurveTo(startX - 90, railY - 2, startX - 50, frontRailY - 2, startX, frontRailY - 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(endX, frontRailY - 2);
+                ctx.bezierCurveTo(endX + 50, frontRailY - 2, endX + 90, railY - 2, endX + 180, railY - 2);
+                ctx.stroke();
+            }
+        }
+    });
+}
+
 function drawOverheadCatenary(railY) {
     const poleSpacing = 280;
-    const wireY = railY - 72; // Výška trolejového drátu nad temenem kolejnice
+    const wireY = railY - 72;
 
-    // Nosné lano a trolejový drát
     ctx.strokeStyle = (timeOfDay === 'night') ? '#475569' : '#1e293b';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -1747,7 +1745,6 @@ function drawOverheadCatenary(railY) {
     ctx.lineTo(canvas.width, wireY);
     ctx.stroke();
 
-    // Trakční sloupy
     const startIdx = Math.floor((totalDistance * 35 - canvas.width) / poleSpacing) - 2;
     const endIdx = Math.floor((totalDistance * 35 + canvas.width * 2) / poleSpacing) + 2;
 
@@ -1755,11 +1752,9 @@ function drawOverheadCatenary(railY) {
         let worldX = i * poleSpacing;
         let screenX = worldX - (totalDistance * 35) + canvas.width * 0.5;
 
-        // Ocelový sloup
         ctx.fillStyle = '#475569';
         ctx.fillRect(screenX - 3, wireY - 25, 6, railY - (wireY - 25));
 
-        // Výložník troleje
         ctx.strokeStyle = '#334155';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -1768,7 +1763,6 @@ function drawOverheadCatenary(railY) {
         ctx.lineTo(screenX - 8, wireY);
         ctx.stroke();
 
-        // Izolátor
         ctx.fillStyle = '#94a3b8';
         ctx.fillRect(screenX + 16, wireY - 4, 6, 8);
     }
@@ -1798,7 +1792,6 @@ function drawTrain(railY) {
             ctx.fillText(car.label, currentX + carWidth / 2, trainY + 25);
         }
 
-        // Spřáhlo mezi vozy
         if (index < activeTrainCars.length - 1) {
             ctx.fillStyle = '#0f172a';
             ctx.fillRect(currentX + carWidth, trainY + carHeight - 14, 8, 5);
@@ -1808,30 +1801,35 @@ function drawTrain(railY) {
     });
 }
 
-// NOČNÍ REFLEKTOR LOKOMOTIVY
-function drawTrainHeadlight(railY) {
+// REALISTICKÝ REFLEKTOR: Jemný, přirozený kužel světla na koleje
+function drawTrainHeadlightRealistic(railY) {
     let totalTrainWidth = 0;
     activeTrainCars.forEach(car => totalTrainWidth += (car.width || 180) + 8);
-    let frontX = (canvas.width / 2) + (totalTrainWidth / 2);
+    let frontX = (canvas.width / 2) + (totalTrainWidth / 2) - 8;
 
     ctx.save();
-    let lightGrad = ctx.createRadialGradient(frontX, railY - 25, 10, frontX + 320, railY - 10, 360);
-    lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
-    lightGrad.addColorStop(0.3, 'rgba(253, 224, 71, 0.35)');
-    lightGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+    let grad = ctx.createLinearGradient(frontX, railY - 20, frontX + 240, railY - 10);
+    grad.addColorStop(0, 'rgba(254, 240, 138, 0.7)');
+    grad.addColorStop(0.25, 'rgba(253, 224, 71, 0.25)');
+    grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
 
-    ctx.fillStyle = lightGrad;
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.moveTo(frontX, railY - 35);
-    ctx.lineTo(frontX + 380, railY - 110);
-    ctx.lineTo(frontX + 420, railY + 40);
-    ctx.lineTo(frontX, railY - 15);
+    ctx.moveTo(frontX, railY - 24);
+    ctx.lineTo(frontX + 260, railY - 50);
+    ctx.lineTo(frontX + 280, railY + 6);
+    ctx.lineTo(frontX, railY - 12);
     ctx.closePath();
+    ctx.fill();
+
+    // Světelný bod na čele lokomotivy
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(frontX + 1, railY - 18, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 }
 
-// DEŠŤOVÝ EFEKT
 function drawRain() {
     ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
     ctx.lineWidth = 1.2;

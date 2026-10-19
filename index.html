@@ -143,7 +143,7 @@
                 <button class="menu-btn btn-settings" onclick="openSettingsModal()">⚙️ Nastavení Hry</button>
             </div>
         </div>
-        <div class="build-version-tag">Build: 19. 10. 2026, 19:55</div>
+        <div class="build-version-tag">Build: 19. 10. 2026, 20:10</div>
     </div>
 
     <!-- 1. MAPA -->
@@ -571,23 +571,24 @@ function renderOwnedList() {
         let spd = vehicleInfo.maxSpeed || vehicleInfo.maxspeed || 120;
         div.innerHTML = `
             <span style="font-size:13px;"><strong>${vehicleInfo.label}</strong></span>
-            <button onclick="addCarToTrain('${vehicleInfo.label}', '${vehicleInfo.file}', ${spd})" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">+ Přidat</button>
+            <button onclick="addCarToTrain('${vehicleInfo.label}', '${vehicleInfo.file}', ${spd}, ${vehicleInfo.height || vehicleInfo.targetHeight || null})" style="background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">+ Přidat</button>
         `;
         ownedContainer.appendChild(div);
     });
 }
 
-function addCarToTrain(fullLabel, file, maxSpd) {
+function addCarToTrain(fullLabel, file, maxSpd, explicitHeight) {
     let type = (fullLabel.toLowerCase().includes('lokomotiva') || fullLabel.toLowerCase().includes('jednotka') || fullLabel.toLowerCase().includes('motorový')) ? 'loco' : 'wagon';
     activeTrainCars.push({ 
         type: type, 
-        targetHeight: 55, 
+        targetHeight: explicitHeight || null, 
         color: '#0275d8', 
         label: fullLabel, 
         file: file,
         maxSpeed: maxSpd || 120
     });
     saveGameState();
+    loadTrainImages();
     renderDepot();
 }
 
@@ -668,7 +669,7 @@ function drawDepotPreview() {
     let startX = (dCanvas.width / 2) - (totalWidth / 2);
 
     activeTrainCars.forEach((car, index) => {
-        const carHeight = car.height || 55;
+        const carHeight = car.height || car.targetHeight || 55;
         const carWidth = car.width || 140;
         const trainY = railY - carHeight;
 
@@ -732,6 +733,7 @@ function initMap() {
 }
 
 window.onload = () => {
+    loadTrainImages();
     updatePointsDisplay();
     toggleHudMode(hudMode);
     toggleControlsHelp(showControls);
@@ -921,7 +923,6 @@ let windCloudOffset = 0;
 let crossingLightTick = 0;
 let passengerAnimTick = 0;
 
-// Částice pro déšť
 const rainDrops = [];
 for (let i = 0; i < 180; i++) {
     rainDrops.push({
@@ -951,44 +952,62 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
-// OPRAVA VÝŠKY: Přesné škálování elektrických i dieselových mašin k vozům
+// SPOLEHLIVÉ ZJIŠTĚNÍ POŽADOVANÉ VÝŠKY MODELU
+function calculateDesiredCarHeight(car) {
+    // 1. Pokud má vůz přímo v databázi explicitní výšku, respektujeme ji
+    if (car.height && car.height > 55) return car.height;
+    if (car.targetHeight && car.targetHeight > 55) return car.targetHeight;
+
+    let labelLower = (car.label || '').toLowerCase();
+    let fileLower = (car.file || '').toLowerCase();
+
+    // 2. Detekce elektrických lokomotiv a elektrických jednotek se sběračem
+    let isElectricLoco = 
+        labelLower.includes('362') || labelLower.includes('163') || labelLower.includes('363') || 
+        labelLower.includes('371') || labelLower.includes('380') || labelLower.includes('242') ||
+        labelLower.includes('vectron') || labelLower.includes('taurus') || labelLower.includes('eso') ||
+        labelLower.includes('peršing') || labelLower.includes('persing') || labelLower.includes('elektr') ||
+        fileLower.includes('362') || fileLower.includes('163') || fileLower.includes('363') || 
+        fileLower.includes('371') || fileLower.includes('380') || fileLower.includes('242');
+
+    // 3. Patrové vozy (např. Bdmteeo, Bmto apod.)
+    let isDoubleDecker = labelLower.includes('patr') || labelLower.includes('elefant') || fileLower.includes('patr') || fileLower.includes('elefant') || fileLower.includes('bdmteeo');
+
+    if (isDoubleDecker) {
+        return 62;
+    } else if (isElectricLoco) {
+        // Elektrická lokomotiva se zvednutým sběračem musí mít celkovou výšku 73px,
+        // aby samotná skříň (spodních ~75% obrázku) měla cca 55px a přesně lícovala s vozy!
+        return 73;
+    }
+
+    // Standardní dieselové mašiny a běžné osobní/nákladní vagóny
+    return 55;
+}
+
 function loadTrainImages() {
     let loco = activeTrainCars.find(c => c.type === 'loco' || c.category === 'loco' || (c.label && (c.label.toLowerCase().includes('lokomotiva') || c.label.toLowerCase().includes('jednotka') || c.label.toLowerCase().includes('810') || c.label.toLowerCase().includes('motorov'))));
     maxSpeedKmh = loco ? (loco.maxSpeed || loco.maxspeed || 120) : 120;
 
     activeTrainCars.forEach(car => {
+        let neededH = calculateDesiredCarHeight(car);
+        car.targetHeight = neededH;
+
         if (!car.img) {
             car.img = new Image();
             car.imgLoaded = false;
             car.img.onload = () => {
                 const aspectRatio = car.img.width / car.img.height;
-                let labelLower = car.label ? car.label.toLowerCase() : '';
-                let fileLower = car.file ? car.file.toLowerCase() : '';
-                
-                // Detekce elektrických mašin se sběrači (např. 163, 362, 371, 380, Vectron, Panter, CityElefant)
-                let isElectric = labelLower.includes('362') || labelLower.includes('163') || labelLower.includes('371') || 
-                                 labelLower.includes('elektr') || labelLower.includes('380') || labelLower.includes('vectron') ||
-                                 labelLower.includes('panter') || labelLower.includes('elefant') ||
-                                 fileLower.includes('362') || fileLower.includes('163') || fileLower.includes('371');
-
-                // Patrové vozy (Bdmteeo, CityElefant) jsou přirozeně vyšší
-                let isDoubleDecker = labelLower.includes('patr') || labelLower.includes('elefant') || fileLower.includes('patr');
-
-                if (isDoubleDecker) {
-                    car.targetHeight = 62;
-                } else if (isElectric) {
-                    // Elektrická mašina se sběračem dostane kalibrovanou výšku 68px, aby její skříň přesně seděla k vozům
-                    car.targetHeight = 68;
-                } else {
-                    car.targetHeight = 55;
-                }
-
                 car.width = car.targetHeight * aspectRatio;
                 car.height = car.targetHeight;
                 car.imgLoaded = true;
             };
-
             car.img.src = (car.file.startsWith('http://') || car.file.startsWith('https://')) ? car.file : VEHICLES_FOLDER + car.file;
+        } else if (car.imgLoaded) {
+            // Pokud byl obrázek už načtený, okamžitě přepočítáme šířku a výšku
+            const aspectRatio = car.img.width / car.img.height;
+            car.height = car.targetHeight;
+            car.width = car.targetHeight * aspectRatio;
         }
     });
 }
@@ -1298,7 +1317,7 @@ function draw() {
     // 1. Obloha & Mraky
     drawSkyAndClouds(railY);
 
-    // 2. Čisté, vrstvené kopce (žádné ošklivé plovoucí kuličky vegetace)
+    // 2. Čisté hory & kopce bez kuliček
     drawDistantMountains(railY);
     drawMidHills(railY);
 
@@ -1317,7 +1336,7 @@ function draw() {
     // 7. Hlavní kolej
     drawMainTrack(railY);
 
-    // 8. Vlak (vykresluje se na koleji)
+    // 8. Vlak (s automaticky přizpůsobenou výškou lokomotiv a vozů)
     drawTrain(railY);
 
     // 9. Noční světlo vlaku (přirozený reflektor)
@@ -1387,7 +1406,6 @@ function drawSkyAndClouds(railY) {
     });
 }
 
-// ČISTÉ KOPCE: Dvě hladké přirozené vrstvy bez nesmyslných plovoucích kuliček
 function drawDistantMountains(railY) {
     let mountColor = (timeOfDay === 'night') ? '#0c1322' : (timeOfDay === 'sunset' ? '#4a1d48' : '#5c768d');
     ctx.fillStyle = mountColor;
@@ -1421,30 +1439,25 @@ function drawTerrainAndGrass(railY) {
     ctx.fillStyle = grassColor;
     ctx.fillRect(0, railY - 4, canvas.width, canvas.height - railY + 4);
 
-    // Štěrkové podloží trati
     ctx.fillStyle = (timeOfDay === 'night') ? '#171717' : '#453f3d';
     ctx.fillRect(0, railY - 8, canvas.width, 24);
 }
 
-// ZKRÁCENÝ, ČISTÝ SILNIČNÍ PŘEJEZD
 function drawCrossings(railY) {
     crossings.forEach(cr => {
         let screenX = canvas.width * 0.5 + (cr.position - totalDistance) * 35;
         if (screenX > -150 && screenX < canvas.width + 150) {
             const roadWidth = 80;
             const roadTop = railY - 40;
-            const roadHeight = 75; // Zkráceno – nezasahuje zbytečně hluboko dolů
+            const roadHeight = 75;
 
-            // Asfalt
             ctx.fillStyle = '#1e293b';
             ctx.fillRect(screenX - roadWidth / 2, roadTop, roadWidth, roadHeight);
 
-            // Středová čára
             ctx.fillStyle = '#f8fafc';
             ctx.fillRect(screenX - 2, roadTop + 5, 4, 20);
             ctx.fillRect(screenX - 2, roadTop + 35, 4, 20);
 
-            // Výstražník AŽD
             let postX = screenX + roadWidth / 2 + 12;
             ctx.fillStyle = '#64748b';
             ctx.fillRect(postX - 2, railY - 55, 4, 55);
@@ -1467,7 +1480,6 @@ function drawCrossings(railY) {
             ctx.fillStyle = whiteLight ? '#f8fafc' : '#334155';
             ctx.beginPath(); ctx.arc(postX, railY - 62, 2.5, 0, Math.PI * 2); ctx.fill();
 
-            // Závora
             ctx.save();
             ctx.translate(postX - 3, railY - 12);
             let barrierAngle = isTrainNear ? 0 : -Math.PI * 0.42;
@@ -1478,7 +1490,6 @@ function drawCrossings(railY) {
             }
             ctx.restore();
 
-            // Auto
             if (cr.hasCar) {
                 let carX = screenX - 16;
                 let carY = railY + 12;
@@ -1527,7 +1538,6 @@ function drawForeTrees(railY) {
     }
 }
 
-// PŮVODNÍ DETAILNÍ NÁDRAŽNÍ BUDOVA
 function drawStationBuilding(railY) {
     route.forEach((station) => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
@@ -1554,7 +1564,6 @@ function drawStationBuilding(railY) {
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(bLeft, railY - 15, bWidth, 15);
 
-            // Střecha s původním detailem
             ctx.fillStyle = randStyle > 0.5 ? '#222' : '#7f8c8d';
             if (randStyle > 0.4) {
                 ctx.beginPath();
@@ -1566,7 +1575,6 @@ function drawStationBuilding(railY) {
                 ctx.fillRect(bLeft - 15, bTop - 10, bWidth + 30, 14);
             }
 
-            // Okna s původním žlutým rozsvícením a rámy
             ctx.fillStyle = '#111';
             for (let wx = bLeft + 30; wx < bLeft + bWidth - 30; wx += 55) {
                 ctx.fillRect(wx, bTop + 20, 28, 38);
@@ -1575,11 +1583,9 @@ function drawStationBuilding(railY) {
                 ctx.fillStyle = '#111';
             }
 
-            // Dveře
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(stationScreenX - 22, railY - 50, 44, 50);
 
-            // Hodiny
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(stationScreenX, bTop + 20, 12, 0, Math.PI * 2);
@@ -1595,7 +1601,6 @@ function drawStationBuilding(railY) {
             ctx.lineTo(stationScreenX + 5, bTop + 20);
             ctx.stroke();
 
-            // Modrá cedule stanice
             ctx.fillStyle = '#00284d';
             ctx.fillRect(stationScreenX - 130, bTop - 25, 260, 28);
             ctx.strokeStyle = '#ffffff';
@@ -1626,7 +1631,6 @@ function drawMainTrack(railY) {
     ctx.fillRect(0, railY - 4, canvas.width, 1.5);
 }
 
-// NÁSTUPIŠTĚ A CESTUJÍCÍ V POPŘEDÍ PŘED VLAKEM + ANIMACE NASTUPOVÁNÍ
 function drawPlatformAndPeople(railY) {
     route.forEach(station => {
         let stationScreenX = canvas.width * 0.5 + (station.position - totalDistance) * 35;
@@ -1635,22 +1639,18 @@ function drawPlatformAndPeople(railY) {
             const platformWidth = 1600;
             const platformY = railY + 8;
             
-            // Betonové nástupiště
             ctx.fillStyle = '#636e72';
             ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 22);
             
-            // Žlutý bezpečnostní pás
             ctx.fillStyle = '#f39c12';
             ctx.fillRect(stationScreenX - platformWidth / 2, platformY, platformWidth, 3);
 
-            // Cestující na nástupišti (kreslí se AŽ PO VLAKU, takže je vlak nepřekryje!)
             if (station.getOnCount > 0) {
                 const shirtColors = ['#e74c3c', '#2980b9', '#2ecc71', '#f1c40f', '#9b59b6'];
                 
                 for (let i = 0; i < Math.min(station.getOnCount, 22); i++) {
                     let basePx = stationScreenX - 420 + (i * 40);
                     
-                    // Jemná animace chůze/nastupování při otevřených dveřích
                     let walkOffset = 0;
                     if (isExchangingPassengers && doorsOpen) {
                         walkOffset = Math.sin(passengerAnimTick * 0.2 + i) * 3;
@@ -1660,22 +1660,18 @@ function drawPlatformAndPeople(railY) {
                     let shirtColor = shirtColors[i % shirtColors.length];
                     let feetY = platformY + 2;
 
-                    // Nohy
                     ctx.fillStyle = '#2c3e50';
                     ctx.fillRect(px - 3, feetY - 10, 2.5, 10);
                     ctx.fillRect(px + 1, feetY - 10, 2.5, 10);
 
-                    // Tělo
                     ctx.fillStyle = shirtColor;
                     ctx.fillRect(px - 4, feetY - 22, 9, 12);
 
-                    // Hlava
                     ctx.fillStyle = '#f39c12';
                     ctx.beginPath();
                     ctx.arc(px, feetY - 27, 4.5, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Vlasy
                     ctx.fillStyle = '#2c3e50';
                     ctx.beginPath();
                     ctx.arc(px, feetY - 29, 4.5, Math.PI, 0);
@@ -1686,37 +1682,30 @@ function drawPlatformAndPeople(railY) {
     });
 }
 
-// DRUHÁ KOLEJ BLÍŽ K POHLEDU (V POPŘEDÍ) S DLOUHÝMI VÝHYBKAMI MIMO NÁSTUPIŠTĚ
 function drawSecondTrackInFront(railY) {
     route.forEach(st => {
         let isBigStation = st.name.includes("hl.n.") || st.name.includes("Praha") || st.name.includes("Brno") || st.name.includes("Plzeň") || st.name.includes("Ostrava") || st.name.includes("Pardubice");
         if (isBigStation) {
             let stationScreenX = canvas.width * 0.5 + (st.position - totalDistance) * 35;
             
-            // Kolej je dostatečně dlouhá (2000px), takže výhybky začínají až DALEKO za nástupištěm
             const trackLength = 2000;
             const startX = stationScreenX - trackLength / 2;
             const endX = stationScreenX + trackLength / 2;
 
             if (endX > -300 && startX < canvas.width + 300) {
-                // Druhá kolej je v popředí (blíž k pohledu)
                 const frontRailY = railY + 36;
 
-                // Podloží
                 ctx.fillStyle = '#3a3533';
                 ctx.fillRect(startX, frontRailY - 3, trackLength, 12);
 
-                // Pražce
                 ctx.fillStyle = '#1e140a';
                 for (let x = startX; x < endX; x += 18) {
                     ctx.fillRect(x, frontRailY - 2, 8, 10);
                 }
 
-                // Kolejnice
                 ctx.fillStyle = '#b0b9c6';
                 ctx.fillRect(startX, frontRailY - 2, trackLength, 3);
 
-                // Výhybky napojené až daleko před/za stanicí (mimo nástupiště)
                 ctx.strokeStyle = '#b0b9c6';
                 ctx.lineWidth = 3;
 
@@ -1736,7 +1725,7 @@ function drawSecondTrackInFront(railY) {
 
 function drawOverheadCatenary(railY) {
     const poleSpacing = 280;
-    const wireY = railY - 72;
+    const wireY = railY - 74;
 
     ctx.strokeStyle = (timeOfDay === 'night') ? '#475569' : '#1e293b';
     ctx.lineWidth = 1.2;
@@ -1779,7 +1768,7 @@ function drawTrain(railY) {
     let currentX = (canvas.width / 2) - (totalTrainWidth / 2);
 
     activeTrainCars.forEach((car, index) => {
-        const carHeight = car.height || 55;
+        const carHeight = car.height || car.targetHeight || 55;
         const carWidth = car.width || 180;
         const trainY = railY - carHeight - 1;
 
@@ -1801,7 +1790,6 @@ function drawTrain(railY) {
     });
 }
 
-// REALISTICKÝ REFLEKTOR: Jemný, přirozený kužel světla na koleje
 function drawTrainHeadlightRealistic(railY) {
     let totalTrainWidth = 0;
     activeTrainCars.forEach(car => totalTrainWidth += (car.width || 180) + 8);
@@ -1822,7 +1810,6 @@ function drawTrainHeadlightRealistic(railY) {
     ctx.closePath();
     ctx.fill();
 
-    // Světelný bod na čele lokomotivy
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(frontX + 1, railY - 18, 3, 0, Math.PI * 2);

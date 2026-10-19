@@ -91,15 +91,15 @@
         .key-badge { background: #333; padding: 1px 5px; border-radius: 3px; color: #fff; font-weight: bold; border: 1px solid #555; }
         .station-banner { background: #003366; color: #fff; padding: 3px 10px; border-radius: 4px; font-weight: bold; border: 1px solid #0055a5; font-size: 13px; }
 
-        /* OPRAVA: Tlačítko nastavení má vysoké z-index a povolené pointer-events */
         .settings-btn { position: absolute; right: 12px; top: 12px; background: #333; color: #fff; border: 1px solid #666; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 1000; pointer-events: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
         .settings-btn:hover { background: #555; border-color: #4db8ff; }
 
-        /* ADVANCED HUD ELEMENTS */
-        .lever-container { display: flex; flex-direction: column; align-items: center; width: 60px; }
-        .lever-track { width: 10px; height: 50px; background: #111; border: 1px solid #555; border-radius: 5px; position: relative; margin: 4px 0; }
-        .lever-handle { width: 22px; height: 10px; background: #4db8ff; border-radius: 3px; position: absolute; left: -6px; transition: bottom 0.15s ease; box-shadow: 0 0 5px rgba(77, 184, 255, 0.8); }
-        .gauge-canvas { width: 70px; height: 70px; }
+        /* UPRANÉ ELEMETY POKROČILÉHO HUDU */
+        .hud-split-container { display: flex; justify-content: space-between; gap: 15px; width: 100%; }
+        .lever-container { display: flex; flex-direction: column; align-items: center; width: 65px; }
+        .lever-track { width: 12px; height: 60px; background: #111; border: 1px solid #555; border-radius: 5px; position: relative; margin: 4px 0; }
+        .lever-handle { width: 24px; height: 12px; background: #4db8ff; border-radius: 3px; position: absolute; left: -6px; transition: bottom 0.15s ease; box-shadow: 0 0 5px rgba(77, 184, 255, 0.8); }
+        .gauge-canvas { width: 110px; height: 110px; }
 
         /* MODÁLNÍ OKNA */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 2000; }
@@ -246,34 +246,41 @@
                 </div>
             </div>
 
-            <!-- POKROČILÝ HUD (ANALOGOVÉ BUDÍKY & PÁKY) -->
-            <div class="ui-panel" id="advancedHud" style="display: none;">
-                <div class="ui-item">
-                    <span class="ui-label">Rychloměr</span>
-                    <canvas id="speedoGauge" class="gauge-canvas"></canvas>
-                </div>
-                
-                <div class="lever-container">
-                    <span class="ui-label">Směr</span>
-                    <div class="lever-track"><div class="lever-handle" id="reverserLever" style="bottom: 20px; background:#f39c12;"></div></div>
-                    <span class="ui-label" id="advDirLabel" style="font-size: 9px;">N</span>
+            <!-- POKROČILÝ HUD (ROZDĚLENÝ & ZVOLENÝ S REALISTICKÝM RYCHLOMĚREM) -->
+            <div class="hud-split-container" id="advancedHud" style="display: none;">
+                <!-- LEVÝ PANEL: BUDÍK RYCHLOMĚRU -->
+                <div class="ui-panel" style="flex: 0 0 auto; padding: 12px 20px;">
+                    <div class="ui-item">
+                        <span class="ui-label">Analogový Rychloměr</span>
+                        <canvas id="speedoGauge" class="gauge-canvas"></canvas>
+                        <span class="ui-value" id="advSpeedDigital" style="font-size: 15px; margin-top: 4px;">0 km/h</span>
+                    </div>
                 </div>
 
-                <div class="lever-container">
-                    <span class="ui-label">Pohon</span>
-                    <div class="lever-track"><div class="lever-handle" id="throttleLever" style="bottom: 0px;"></div></div>
-                    <span class="ui-label" id="advThrottleLabel" style="font-size: 9px;">0/3</span>
-                </div>
+                <!-- PRAVÝ PANEL: OVLÁDACÍ PÁKY & DVEŘE -->
+                <div class="ui-panel" style="flex: 1; justify-content: space-around;">
+                    <div class="lever-container">
+                        <span class="ui-label">Směr</span>
+                        <div class="lever-track"><div class="lever-handle" id="reverserLever" style="bottom: 24px; background:#f39c12;"></div></div>
+                        <span class="ui-label" id="advDirLabel" style="font-size: 10px; font-weight: bold;">N</span>
+                    </div>
 
-                <div class="lever-container">
-                    <span class="ui-label">Brzda</span>
-                    <div class="lever-track"><div class="lever-handle" id="brakeLever" style="bottom: 0px; background:#e74c3c;"></div></div>
-                    <span class="ui-label" id="advBrakeLabel" style="font-size: 9px;">0/4</span>
-                </div>
+                    <div class="lever-container">
+                        <span class="ui-label">Pohon</span>
+                        <div class="lever-track"><div class="lever-handle" id="throttleLever" style="bottom: 0px;"></div></div>
+                        <span class="ui-label" id="advThrottleLabel" style="font-size: 10px; font-weight: bold;">0/3</span>
+                    </div>
 
-                <div class="ui-item">
-                    <span class="ui-label">Dveře</span>
-                    <span class="ui-value doors-closed" id="advDoorsVal" style="font-size: 14px;">ZAVŘENO</span>
+                    <div class="lever-container">
+                        <span class="ui-label">Brzda</span>
+                        <div class="lever-track"><div class="lever-handle" id="brakeLever" style="bottom: 0px; background:#e74c3c;"></div></div>
+                        <span class="ui-label" id="advBrakeLabel" style="font-size: 10px; font-weight: bold;">0/4</span>
+                    </div>
+
+                    <div class="ui-item">
+                        <span class="ui-label">Dveře</span>
+                        <span class="ui-value doors-closed" id="advDoorsVal" style="font-size: 14px;">ZAVŘENO</span>
+                    </div>
                 </div>
             </div>
 
@@ -903,7 +910,7 @@ function pseudoRandom(x) {
 let totalPassengers = 45; 
 let isExchangingPassengers = false;
 
-// NAČÍTÁNÍ OBRÁZKŮ VOZIDEL & OMEZENÍ RYCHLOSTI
+// OPRAVA 1: NAČÍTÁNÍ OBRÁZKŮ VOZIDEL S KOREKCÍ VYŠŠÍCH ELEKTRICKÝCH LOKOMOTIV MÍSTO ZMENŠOVÁNÍ
 function loadTrainImages() {
     let loco = activeTrainCars.find(c => c.type === 'loco' || c.category === 'loco' || (c.label && (c.label.toLowerCase().includes('lokomotiva') || c.label.toLowerCase().includes('jednotka') || c.label.toLowerCase().includes('810') || c.label.toLowerCase().includes('motorov'))));
     
@@ -920,7 +927,16 @@ function loadTrainImages() {
 
             car.img.onload = () => {
                 const aspectRatio = car.img.width / car.img.height;
-                car.targetHeight = 55;
+                
+                // Detekce elektrických vozidel se sběrači (např. ČD 362, 163, 371, Panter apod.)
+                let labelLower = car.label ? car.label.toLowerCase() : '';
+                let fileLower = car.file ? car.file.toLowerCase() : '';
+                let isElectric = labelLower.includes('362') || labelLower.includes('163') || labelLower.includes('371') || 
+                                 labelLower.includes('elektr') || labelLower.includes('380') || labelLower.includes('vectron') ||
+                                 fileLower.includes('362') || fileLower.includes('163') || fileLower.includes('371');
+
+                // Elektrická lokomotiva dostane vyšší výškový profil, aby její skříň měla stejnou výšku jako vagóny
+                car.targetHeight = isElectric ? 70 : 55;
                 car.width = car.targetHeight * aspectRatio;
                 car.height = car.targetHeight;
                 car.imgLoaded = true;
@@ -1089,15 +1105,16 @@ function updateUI() {
 
     if (hudMode === 'advanced') {
         drawSpeedoGauge(speedKmh, maxSpeedKmh);
-        
-        let revBottom = direction === 1 ? '38px' : (direction === 0 ? '20px' : '2px');
+        document.getElementById('advSpeedDigital').innerText = Math.round(speedKmh) + ' km/h';
+
+        let revBottom = direction === 1 ? '44px' : (direction === 0 ? '24px' : '2px');
         document.getElementById('reverserLever').style.bottom = revBottom;
         document.getElementById('advDirLabel').innerText = direction === 1 ? 'FWD' : (direction === 0 ? 'N' : 'REV');
 
-        document.getElementById('throttleLever').style.bottom = (throttle * 14) + 'px';
+        document.getElementById('throttleLever').style.bottom = (throttle * 16) + 'px';
         document.getElementById('advThrottleLabel').innerText = throttle + '/3';
 
-        document.getElementById('brakeLever').style.bottom = (brake * 10) + 'px';
+        document.getElementById('brakeLever').style.bottom = (brake * 12) + 'px';
         document.getElementById('advBrakeLabel').innerText = brake + '/4';
 
         const advDoors = document.getElementById('advDoorsVal');
@@ -1127,42 +1144,94 @@ function updateUI() {
     }
 }
 
+// OPRAVA 2 & 3: REALISTICKÝ ANALOGOVÝ RYCHLOMĚR BEZ PŘETOČENÍ S ČÍSELNOU STUPNICÍ
 function drawSpeedoGauge(speed, maxSpd) {
     const gCanvas = document.getElementById('speedoGauge');
     if (!gCanvas) return;
     const gCtx = gCanvas.getContext('2d');
-    gCanvas.width = 70;
-    gCanvas.height = 70;
+    
+    gCanvas.width = 110;
+    gCanvas.height = 110;
+    const centerX = 55;
+    const centerY = 55;
+    const radius = 48;
 
-    gCtx.clearRect(0, 0, 70, 70);
+    gCtx.clearRect(0, 0, 110, 110);
 
-    gCtx.fillStyle = '#111';
+    // Vnější kryt ciferníku
+    gCtx.fillStyle = '#181818';
     gCtx.beginPath();
-    gCtx.arc(35, 35, 30, 0, Math.PI * 2);
+    gCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     gCtx.fill();
     gCtx.strokeStyle = '#444';
-    gCtx.lineWidth = 2;
+    gCtx.lineWidth = 3;
     gCtx.stroke();
 
-    let ratio = Math.min(1, speed / maxSpd);
-    let angle = -Math.PI * 0.75 + (ratio * Math.PI * 1.5);
+    // Stupnice od -120 stupňů do +120 stupňů (celkem 240 stupňů rozkmit)
+    const minAngle = -Math.PI * 0.667; 
+    const maxAngle = Math.PI * 0.667;  
+    
+    // Zaokrouhlený křížový rozsah stupnice (např. do 140 nebo 160 km/h podle maxSpd)
+    let gaugeMax = Math.ceil(maxSpd / 20) * 20;
+    if (gaugeMax < 120) gaugeMax = 120;
 
+    // Vykreslení rysek a čísel stupnice
+    gCtx.fillStyle = '#aaa';
+    gCtx.font = '8px Arial';
+    gCtx.textAlign = 'center';
+    gCtx.textBaseline = 'middle';
+
+    for (let s = 0; s <= gaugeMax; s += 20) {
+        let fraction = s / gaugeMax;
+        let tickAngle = minAngle + fraction * (maxAngle - minAngle);
+
+        // Ryska
+        let innerR = radius - (s % 40 === 0 ? 10 : 6);
+        let outerR = radius - 3;
+
+        let x1 = centerX + Math.cos(tickAngle) * innerR;
+        let y1 = centerY + Math.sin(tickAngle) * innerR;
+        let x2 = centerX + Math.cos(tickAngle) * outerR;
+        let y2 = centerY + Math.sin(tickAngle) * outerR;
+
+        gCtx.strokeStyle = (s > maxSpd) ? '#e74c3c' : '#ccc';
+        gCtx.lineWidth = (s % 40 === 0) ? 2 : 1;
+        gCtx.beginPath();
+        gCtx.moveTo(x1, y1);
+        gCtx.lineTo(x2, y2);
+        gCtx.stroke();
+
+        // Číslo na stupnici
+        if (s % 40 === 0 || s === gaugeMax) {
+            let textR = radius - 18;
+            let tx = centerX + Math.cos(tickAngle) * textR;
+            let ty = centerY + Math.sin(tickAngle) * textR;
+            gCtx.fillStyle = '#ddd';
+            gCtx.fillText(s, tx, ty);
+        }
+    }
+
+    // STRIKTNÍ OMEZENÍ RYCHLOSTI VÝPOČTEM - NIKDY NEBude RUČIČKA PŘETOČENA!
+    let clampedSpeed = Math.max(0, Math.min(speed, gaugeMax));
+    let currentFraction = clampedSpeed / gaugeMax;
+    let needleAngle = minAngle + currentFraction * (maxAngle - minAngle);
+
+    // Ručička
     gCtx.strokeStyle = '#e74c3c';
-    gCtx.lineWidth = 2;
+    gCtx.lineWidth = 2.5;
     gCtx.beginPath();
-    gCtx.moveTo(35, 35);
-    gCtx.lineTo(35 + Math.cos(angle) * 22, 35 + Math.sin(angle) * 22);
+    gCtx.moveTo(centerX, centerY);
+    gCtx.lineTo(centerX + Math.cos(needleAngle) * (radius - 12), centerY + Math.sin(needleAngle) * (radius - 12));
     gCtx.stroke();
 
+    // Středový čep
     gCtx.fillStyle = '#fff';
     gCtx.beginPath();
-    gCtx.arc(35, 35, 3, 0, Math.PI * 2);
+    gCtx.arc(centerX, centerY, 4.5, 0, Math.PI * 2);
     gCtx.fill();
-
-    gCtx.fillStyle = '#4db8ff';
-    gCtx.font = 'bold 9px Arial';
-    gCtx.textAlign = 'center';
-    gCtx.fillText(Math.round(speed), 35, 54);
+    gCtx.strokeStyle = '#222';
+    gCtx.lineWidth = 1;
+    gCtx.stroke();
 }
 
 // NASTAVENÍ MODAL
@@ -1228,9 +1297,7 @@ function drawSkyAndClouds(railY) {
     });
 }
 
-// KOPCE S BOHATOU VEGETACÍ V POZADÍ
 function drawFarHills(railY) {
-    // Vzdálené modravé kopce
     ctx.fillStyle = '#5c768d';
     ctx.beginPath();
     ctx.moveTo(0, railY);
@@ -1240,7 +1307,6 @@ function drawFarHills(railY) {
     }
     ctx.fill();
 
-    // Bližší zelené kopce s vegetací
     let frontGradient = ctx.createLinearGradient(0, railY - 180, 0, railY);
     frontGradient.addColorStop(0, '#2c3e50');
     frontGradient.addColorStop(1, '#1e2b37');
@@ -1254,7 +1320,6 @@ function drawFarHills(railY) {
     }
     ctx.fill();
 
-    // Lesy a vegetace na horizontu kopců
     ctx.fillStyle = '#143d22';
     let hillVegOffset = (totalDistance * 0.08) % 800;
     for (let x = -hillVegOffset - 800; x < canvas.width + 800; x += 40) {
@@ -1454,33 +1519,27 @@ function drawSecondTrackAtStations(railY) {
             const endX = stationScreenX + trackLength / 2;
 
             if (endX > -300 && startX < canvas.width + 300) {
-                const frontRailY = railY + 28; // Umístěna v dolní části/před nástupištěm
+                const frontRailY = railY + 28;
 
-                // Podloží vedlejší koleje
                 ctx.fillStyle = '#3a3533';
                 ctx.fillRect(startX, frontRailY - 3, trackLength, 10);
 
-                // Pražce
                 ctx.fillStyle = '#1e140a';
                 for (let x = startX; x < endX; x += 18) {
                     ctx.fillRect(x, frontRailY - 2, 8, 8);
                 }
 
-                // Kolejnice
                 ctx.fillStyle = '#b0b9c6';
                 ctx.fillRect(startX, frontRailY - 2, trackLength, 3);
 
-                // Plynulé výhybky na obou koncích
                 ctx.strokeStyle = '#b0b9c6';
                 ctx.lineWidth = 3;
 
-                // Levá výhybka
                 ctx.beginPath();
                 ctx.moveTo(startX - 120, railY - 2);
                 ctx.bezierCurveTo(startX - 60, railY - 2, startX - 40, frontRailY - 2, startX, frontRailY - 2);
                 ctx.stroke();
 
-                // Pravá výhybka
                 ctx.beginPath();
                 ctx.moveTo(endX, frontRailY - 2);
                 ctx.bezierCurveTo(endX + 40, frontRailY - 2, endX + 60, railY - 2, endX + 120, railY - 2);
